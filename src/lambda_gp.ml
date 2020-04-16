@@ -3,8 +3,9 @@ open Lambda;;
 open Lambda_rand;;
 
 
-let r = rand_term 16 6 in
-printf "<lambda-gp> %s => %s\n" (to_string r) (to_string (reduce_fix r));;
+let r = rand_term_l 64 4;;
+printf "<lambda-gp> %s => " (to_string r);;
+printf "%s\n" (to_string (reduce_fix r));;
 
 (* 
 open Lambda_church;;
