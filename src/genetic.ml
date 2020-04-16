@@ -24,6 +24,10 @@ type ga_state = {
 let log s fmt = printf ("<λ-gp> " ^^ s ^^ "\n%!") fmt;;
 
 
+let mutate t = t;;
+let crossover_k n (t,t') = (t', t);;
+let crossover (t,t') = crossover_k 1;;
+
 let fitness_of_pop s p =
   let rec pop_fitness' p c = match p with
   | [] -> c
@@ -34,11 +38,39 @@ let fitness_of_pop s p =
   (fst res /. float(List.length p), snd res)
 ;;
 
+let select_best s =
+  let rec sl p = match p with
+  | (t, f)::p' -> if f = s.best_fitness then (t,f) else sl p'
+  in sl s.population
+;;
+
+let select_best_parents p n =
+  let rec sub l i = match (l,i) with
+  | [], _ -> []
+  | t::l', 0 -> []
+  | t::l', n -> t::(sub l' (n-1))
+  in
+  let sorted = List.sort (fun x y -> int_of_float (snd y *. 10. -. snd x *. 10.0)) p in
+  sub sorted n
+;;
+
+let rec terms_of_pop p = match p with
+| [] -> []
+| (t,f)::p' -> t::(terms_of_pop p') 
+;;
+
+let rec pop_of_terms s l = match l with
+| [] -> []
+| t::l' -> (t, s.settings.fitness_f t)::(pop_of_terms s l')
+;;
+
+
 let ga_init s =   
   let rec gen_init_pop l = match l with
   | 0 -> []
   | _ -> 
     let nt = Rand_term.generate s.term_len s.var_n in 
+    (* List.iter (fun x -> printf "%s\n%!" x) @@ Lambda.fv_l nt; *)
     if Lambda.len nt < s.term_len || not (s.valid_f nt) then 
       gen_init_pop l 
     else 
@@ -61,11 +93,51 @@ let ga_print s =
   let rec print_pop p = match p with
   | [] -> ()
   | i::p' -> 
-    log "[gen%d] => [%f] %s" s.generation (snd i) (Lambda.to_string @@ fst i);
+    log "[%d] => [%f] %s" s.generation (snd i) (Lambda.to_string @@ fst i);
     print_pop p'
   in
   print_pop s.population;
-  log "[gen%d] => %f best, %f avg" s.generation s.best_fitness s.avg_fitness  
+  log "[%d] => %f best, %f avg" s.generation s.best_fitness s.avg_fitness;
+  printf "\n"
 ;;
 
-let ga_step s = s;;
+let ga_step s = 
+  let genn = s.generation + 1 in
+  let best_parents = select_best_parents s.population (s.settings.pop_size / 2) in
+  (* log "%d" (List.length best_parents); *)
+  let best_terms = terms_of_pop best_parents in
+
+  (* Crossover of parents *)
+
+  (* Mutation of crossovers? *)
+
+  (* Create the new population with parents and mutations *)
+
+  (* Assert that the population has the right size *)
+
+  let npop = pop_of_terms s best_terms in
+  let pop_fit = fitness_of_pop s npop in
+  { s with 
+    avg_fitness= fst pop_fit;
+    best_fitness= snd pop_fit;
+    generation= genn;
+    population= npop;
+  }
+  ;;
+
+let rec ga_steps s = match s.generation with 
+| n when n = s.settings.gen_n -> 
+  let (t, f) = select_best s in
+  log "best is %s with a fitness of %f" (Lambda.to_string t) f;
+  s
+| _ -> 
+  let s' = ga_step s in
+  ga_print s';
+  let (t, f) = select_best s in
+  if f >= s.settings.fitness_target then (
+    log "find a best at generation %d" s.generation;
+    log "best is %s with a fitness of %f" (Lambda.to_string t) f;
+    s
+  ) else
+    ga_steps s'
+;;

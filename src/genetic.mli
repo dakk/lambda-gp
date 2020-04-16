@@ -19,22 +19,9 @@ type ga_state = {
   generation: int;
 }
 
-(* type population = Lambda.term list
-
-(** Crossover a pair of terms *)
-val crossover: (Lambda.term * Lambda.term) -> (Lambda.term * Lambda.term)
-
-(** Crossover a pair of terms, k times *)
-val crossover_k: int -> (Lambda.term * Lambda.term) -> (Lambda.term * Lambda.term)
-
-(** Mutate a term *)
-val mutate: Lambda.term -> Lambda.term
-*)
-
-(** Evalute fitness value for a given term *)
-(* val fitness: fitness_f -> Lambda.term -> float *)
-
 
 val ga_init: ga_settings -> ga_state
 val ga_print: ga_state -> unit
+val ga_steps: ga_state -> ga_state
+val ga_step: ga_state -> ga_state
 val log: ('a -> 'b, out_channel, unit, unit, unit, unit) format6 -> 'a -> 'b

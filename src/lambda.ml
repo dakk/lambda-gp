@@ -40,6 +40,7 @@ let rec fv t = match t with
   | App(t0,t1) -> union (fv t0) (fv t1)
   | Abs(x,t0) -> diff (fv t0) x;;
 
+let fv_l t = match fv t with Set l -> l;;
 
 (** Substitution *)
 let count = ref(-1);;
