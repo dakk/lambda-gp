@@ -1,0 +1,6 @@
+(executable
+ (name lambda_gp))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
