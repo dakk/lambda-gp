@@ -25,9 +25,12 @@ let succ =
   Abs("n",Abs("f",Abs("x",
     App(Var "f",(App(App(Var "n",Var "f"),Var "x"))))));;
  
-let iszero = 
+let is_zero = 
   Abs("n",Abs("x",Abs("y",
     App(App(Var "n",Abs("z",Var "y")),Var "x"))));;
  
-printf "%s\n" (to_string (reduce_fix (App(iszero,(church 0)))));;
-printf "%s\n" (to_string (reduce_fix (App(iszero,(church 1)))));; *)
+printf "%s\n" (to_string (reduce_fix (App(is_zero,(church 0)))));;
+printf "%s\n" (to_string (reduce_fix (App(is_zero,(church 1)))));; 
+
+
+*)

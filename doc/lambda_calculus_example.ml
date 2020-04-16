@@ -86,9 +86,7 @@ reduce (App((const "z"),omega)) 1;;
 
 (** Booleans *)
 let ift = Abs("x",Var "x");;
- 
 let t = Abs("x",Abs("y",Var "x"));;
- 
 let f = Abs("x",Abs("y",Var "y"));;
 
 

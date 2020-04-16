@@ -5,7 +5,8 @@ type term =
 
 val to_string: term -> string
 val reduce_fix: term -> term
-val reduce: term -> int -> term
+val reduce: int -> term -> term
+val has_redex: term -> bool
 val subst: string -> term -> term -> term
 
 (** Return the length of a term *)

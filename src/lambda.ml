@@ -70,8 +70,9 @@ let rec reduce1 t = if not (has_redex t) then t else match t with
   | App(Abs(x,t0),t1) -> subst x t1 t0 
   | App(t0,t1) -> if has_redex t0 then App(reduce1 t0,t1) else App(t0,reduce1 t1);;
  
-let rec reduce t k = if k=0 then t else let t' = reduce1 t in reduce t' (k-1);;
- 
+let rec reduce k t = if k=0 then t else let t' = reduce1 t in reduce (k-1) t';;
+
+(* This could end in infinite loop? *)
 let rec reduce_fix t = let t' = reduce1 t in if t'=t then t' else reduce_fix t';;
 
 

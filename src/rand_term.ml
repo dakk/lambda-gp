@@ -1,6 +1,6 @@
 open Lambda;;
 
-let var_alphabet = "xyzwtuvpqrsabcdefghilmno";;
+let var_alphabet = "xyzfnwtuvpqrsabcdeghilmo";;
 let var_alphabet_len = String.length var_alphabet;;
 
 Random.self_init ();;
