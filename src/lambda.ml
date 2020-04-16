@@ -9,7 +9,7 @@ type term =
 (** Helper function *)
 let rec to_string t = match t with
     Var x -> x
-  | Abs (x,t') -> "\\" ^ x ^ "." ^ to_string t'
+  | Abs (x,t') -> "(λ" ^ x ^ "." ^ to_string t' ^ ")"
   | App (t0,t1) -> "(" ^ (to_string t0) ^ " " ^ (to_string t1) ^ ")"
 ;;
   
@@ -73,3 +73,10 @@ let rec reduce1 t = if not (has_redex t) then t else match t with
 let rec reduce t k = if k=0 then t else let t' = reduce1 t in reduce t' (k-1);;
  
 let rec reduce_fix t = let t' = reduce1 t in if t'=t then t' else reduce_fix t';;
+
+
+let rec len t = match t with
+  Var _ -> 1
+| Abs (_, t') -> 1 + len t'
+| App (t', t'') -> 1 + len t' + len t''
+;;
