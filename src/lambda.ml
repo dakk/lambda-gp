@@ -9,9 +9,29 @@ type term =
 (** Helper function *)
 let rec to_string t = match t with
     Var x -> x
-  | Abs (x,t') -> "(λ" ^ x ^ "." ^ to_string t' ^ ")"
+  | Abs (x,t') -> "(λ" ^ x ^ "." ^ to_string t' ^ ")" (* λ *)
   | App (t0,t1) -> "(" ^ (to_string t0) ^ " " ^ (to_string t1) ^ ")"
 ;;
+
+(** (λx.(λf.(λf.(z y)))) *)
+(* exception InvalidLambdaString;;
+
+let parse s = 
+  let rec parse' s i =  match s.[i] with
+    | '/' -> Abs(String.make 1 s.[i+1], parse' s (i+3))
+    | c when Char.code c >= Char.code 'a' && Char.code c <= Char.code 'z' -> Var (String.make 1 c)
+    | _ -> (
+      try (
+        let ii = String.index_from s (i+1) ' ' in
+        App(parse' s (i+1), parse' s (ii+1))
+      ) with | _ -> parse' s (i+1)
+    )
+  in parse' s 1
+;;
+parse "(a b)";;
+parse "(/a.b)";;
+parse "(/a.(c d))";;
+parse "((a b) ((c d) (e f)))";; *)
   
 let var_alphabet = "xyzfnwtuvpqrsabcdeghilmo";;
 let var_alphabet_len = String.length var_alphabet;;

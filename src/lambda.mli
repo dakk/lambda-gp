@@ -1,3 +1,5 @@
+(* exception InvalidLambdaString *)
+
 type term =
 	| Var of string 
 	| Abs of (string * term) 
@@ -11,6 +13,7 @@ val fv: term -> string set
 val fv_l: term -> string list
 
 val to_string: term -> string
+(* val parse: string -> term *)
 
 val reduce_fix: term -> term
 val reduce: int -> term -> term

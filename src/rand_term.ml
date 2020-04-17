@@ -5,9 +5,12 @@ Random.self_init ();;
 let rand_var v = Lambda.get_var @@ Random.int v;;
 
 let rec generate d v = match (d, Random.int 3) with
-| (0, _) -> Var (rand_var v);
+| (n, _) when n <= 1 -> Var (rand_var v);
 | (_, 0) -> Abs (rand_var v, generate (d-1) v)
-| (_, 1) -> App (generate (d-1) v, generate (d-1) v)
+| (_, 1) -> 
+  let a = generate (d-2) v in
+  let nd = Lambda.len a in
+  App (a, generate nd v)
 | (_, 2) -> Var (rand_var v);
 ;;
 

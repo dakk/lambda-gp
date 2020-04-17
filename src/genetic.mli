@@ -1,7 +1,9 @@
 type fitness_f = Lambda.term -> float
 type valid_f = Lambda.term -> bool
+type test_best_f = Lambda.term -> bool
 
 type ga_settings = {
+  test_best_f: test_best_f;
   fitness_f: fitness_f;
   valid_f: valid_f;
   fitness_target: float;
@@ -15,6 +17,7 @@ type ga_state = {
   settings: ga_settings;
   population: (Lambda.term * float) list;
   avg_fitness: float;
+  avg_term_len: int;
   best_fitness: float;
   generation: int;
 }
