@@ -5,6 +5,8 @@ type term =
 
 type 'a set = Set of 'a list;;
 
+val get_var: int -> string
+
 val fv: term -> string set
 val fv_l: term -> string list
 

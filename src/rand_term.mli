@@ -1,6 +1,3 @@
-(** Generate a random variable between v random possible variables (bound to alphabet length) *)
-val rand_var_bound: int -> string
-
 (** Generate a random variable between v random possible variables *)
 val rand_var: int -> string
 

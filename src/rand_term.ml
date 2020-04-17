@@ -1,21 +1,8 @@
 open Lambda;;
 
-let var_alphabet = "xyzfnwtuvpqrsabcdeghilmo";;
-let var_alphabet_len = String.length var_alphabet;;
-
 Random.self_init ();;
 
-let rand_var_bound v =  String.get var_alphabet (Random.int v) |> String.make 1;;
-
-let rand_var v = 
-  let rec in_rand r =
-    match r with
-    | n when n < String.length var_alphabet -> String.get var_alphabet r |> String.make 1
-    | _ -> 
-      (String.get var_alphabet @@ r mod var_alphabet_len |> String.make 1) ^
-      (in_rand @@ r / var_alphabet_len)
-  in in_rand @@ Random.int v
-;;
+let rand_var v = Lambda.get_var @@ Random.int v;;
 
 let rec generate d v = match (d, Random.int 3) with
 | (0, _) -> Var (rand_var v);

@@ -13,6 +13,22 @@ let rec to_string t = match t with
   | App (t0,t1) -> "(" ^ (to_string t0) ^ " " ^ (to_string t1) ^ ")"
 ;;
   
+let var_alphabet = "xyzfnwtuvpqrsabcdeghilmo";;
+let var_alphabet_len = String.length var_alphabet;;
+
+
+let get_var_bound n =  String.get var_alphabet n |> String.make 1;;
+
+let get_var v = 
+  let rec in_v r =
+    match r with
+    | n when n < String.length var_alphabet -> String.get var_alphabet r |> String.make 1
+    | _ -> 
+      (String.get var_alphabet @@ r mod var_alphabet_len |> String.make 1) ^
+      (in_v @@ r / var_alphabet_len)
+  in in_v v
+;;
+
 
 (** Set definition *)
 type 'a set = Set of 'a list;;
@@ -44,7 +60,7 @@ let fv_l t = match fv t with Set l -> l;;
 
 (** Substitution *)
 let count = ref(-1);;
-let gensym = fun () -> count := !count +1; "x" ^ string_of_int (!count);;
+let gensym = fun () -> count := !count +1; get_var !count;; (* "x" ^ string_of_int (!count);; *)
  
 let rec subst x t' t = match t with
     Var y -> if x=y then t' else Var y
@@ -55,7 +71,7 @@ let rec subst x t' t = match t with
       let z = gensym() in Abs(z,subst x t' (subst z (Var y) t0));;
       
       
-(** Reduction *)
+(** β-reduction *)
 let is_redex t = match t with 
     App(Abs(x,t0),t1) -> true
   | _ -> false;;
@@ -71,10 +87,18 @@ let rec reduce1 t = if not (has_redex t) then t else match t with
   | App(Abs(x,t0),t1) -> subst x t1 t0 
   | App(t0,t1) -> if has_redex t0 then App(reduce1 t0,t1) else App(t0,reduce1 t1);;
  
-let rec reduce k t = if k=0 then t else let t' = reduce1 t in reduce (k-1) t';;
+let reduce k t =
+  let rec reduce' k t = if k=0 then t else let t' = reduce1 t in reduce' (k-1) t' in
+  count := 0;
+  reduce' k t
+;;
 
-(* This could end in infinite loop? *)
-let rec reduce_fix t = let t' = reduce1 t in if t'=t then t' else reduce_fix t';;
+let reduce_fix t =
+  let rec reduce_fix' t = let t' = reduce1 t in if t'=t then t' else reduce_fix' t' in
+  count := 0;
+  reduce_fix' t
+;;
+
 
 
 let rec len t = match t with
