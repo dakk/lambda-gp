@@ -77,8 +77,8 @@ let rec fv t = match t with
 let fv_l t = match fv t with Set l -> l;;
 
 (** Substitution *)
-let count = ref(-1);;
-let gensym = fun () -> count := !count +1; get_var !count;; (* "x" ^ string_of_int (!count);; *)
+let vcount = ref(-1);;
+let gensym = fun () -> vcount := !vcount +1; get_var !vcount;; (* "x" ^ string_of_int (!vcount);; *)
  
 let rec subst x t' t = match t with
     Var y -> if x=y then t' else Var y
@@ -107,16 +107,36 @@ let rec reduce1 t = if not (has_redex t) then t else match t with
  
 let reduce k t =
   let rec reduce' k t = if k=0 then t else let t' = reduce1 t in reduce' (k-1) t' in
-  count := 0;
+  vcount := 0;
   reduce' k t
 ;;
 
 let reduce_fix t =
   let rec reduce_fix' t = let t' = reduce1 t in if t'=t then t' else reduce_fix' t' in
-  count := 0;
+  vcount := 0;
   reduce_fix' t
 ;;
 
+let reduce_fix_timeout ?(n=128) t = 
+  let rec subst' x t' t n' = if n' = 0 then t else match t with
+    Var y -> if x=y then t' else Var y
+  | App(t0,t1) -> App(subst' x t' t0 (n'-1), subst' x t' t1 (n'-1))
+  | Abs(y,t0) when y=x -> Abs(x,t0)
+  | Abs(y,t0) when y!=x && not (member y (fv t')) -> Abs(y, subst' x t' t0 (n'-1))
+  | Abs(y,t0) when y!=x && member y (fv t') -> 
+    let z = gensym() in Abs(z,subst' x t' (subst' z (Var y) t0 (n'-1)) (n'-1))
+  in
+  let rec reduce1' t n' = if not (has_redex t) || n' = 0 then t else match t with
+    Abs(x,t') -> Abs(x,reduce1' t' (n'-1))
+  | App(Abs(x,t0),t1) -> subst' x t1 t0 (n'-1)
+  | App(t0,t1) -> if has_redex t0 then App(reduce1' t0 (n'-1),t1) else App(t0,reduce1' t1 (n'-1))
+  in  
+  let rec reduce_fix' t n' = 
+  	let t' = reduce1' t (n'-1) in if t'=t || n' = 0 then t' else reduce_fix' t' (n'-1) 
+  in
+  vcount := 0;
+  reduce_fix' t n
+;;
 
 
 let rec len t = match t with

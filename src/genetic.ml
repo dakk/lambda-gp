@@ -62,6 +62,12 @@ let get_inner_term t pos =
 ;;
 
 
+let mutate_random s t =
+  replace_tree t 
+  (1 + (Random.int @@ Lambda.len t)) 
+  (Rand_term.generate_l (1 + (Random.int s.settings.term_len)) @@ 1 + (Random.int @@ s.settings.var_n - 1))
+;;
+
 let mutate_redex s t =
   Lambda.reduce (Random.int s.settings.var_n) t
 ;;
@@ -123,12 +129,15 @@ let select_best s =
 
 let sort_population p = List.sort (fun x y -> int_of_float @@ (snd y -. snd x) *. 1000000.) p;;
 
+let rec sublist b e l = match l with
+    [] -> failwith "sublist"
+  | h :: t -> 
+    let tail = if e=0 then [] else sublist (b-1) (e-1) t in
+    if b>0 then tail else h :: tail
+;;
+
 let select_best_parents p n =
-  let rec sub l i = match (l,i) with
-  | [], _ -> []
-  | _::_, 0 -> []
-  | t::l', n -> t::(sub l' (n-1))
-  in sub p n 
+  sublist 0 n p
    (* |> sort_population) n *)
 ;;
 
@@ -186,7 +195,9 @@ let ga_print s =
 let ga_step s = 
   let rec apply_cross (tl: Lambda.term list) = match tl with
     [] -> []
-  | t::[] -> [t] 
+  | t::[] -> 
+    let tcross = crossover (t,t) in
+    (fst tcross)::(snd tcross)::[]
   | t::t'::tl' ->
     let tcross = crossover (t,t') in
     (fst tcross)::(snd tcross)::(apply_cross tl')
@@ -197,18 +208,20 @@ let ga_step s =
   let best_terms = terms_of_pop @@ best_parents in
 
   (* Crossover of parents *)
-  let cross_pop = best_terms |> Helpers.shuffle |> apply_cross in
+  let cross_pop = ([fst @@ select_best s] @ best_terms) |> Helpers.shuffle |> apply_cross in
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
   |> List.map (fun t -> if (Random.int 100 < 20) then mutate s t else t) 
   (* |> List.map (fun t -> if (Random.int 100 < 50) then mutate_drop s t else t)  *)
   |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t)
-  |> List.map (fun t -> if (Random.int 100 < 100) then mutate_harvest s t else t) in
+  |> List.map (fun t -> if (Random.int 100 < 90) then mutate_harvest s t else t)
+  |> List.map (fun t -> if (Random.int 100 < 10) then mutate_random s t else t) in
 
   let best_pop = best_terms in
   let npop = best_pop @ mut_cross_pop in
-  let npop = select_best_parents (pop_of_terms s npop |> sort_population) s.settings.pop_size in  
+  let npop = [select_best s] @
+  	( (pop_of_terms s npop) |> sort_population |> sublist 0 s.settings.pop_size ) in  
 
   match fitness_stat_of_pop npop with
   | tl, af, bf -> { s with 

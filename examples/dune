@@ -39,6 +39,11 @@
  (modules ("identity")))
 
 (executable
+ (name pair)
+ (libraries lambda_gp)
+ (modules ("pair")))
+
+(executable
  (name pair_selector)
  (libraries lambda_gp)
  (modules ("pair_selector")))

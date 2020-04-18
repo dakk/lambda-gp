@@ -11,14 +11,14 @@ let s = ga_init {
   test_best_f= (fun t -> 
       let r = 10 + Random.int 15 in
       try (
-        let mul2 = reduce 9 @@ App(t, Church.of_int r) in 
+        let mul2 = reduce 10 @@ App(t, Church.of_int r) in 
         let res = Church.to_int mul2 in
         if res = r * 2 then true else false )
       with | _ -> false
   );
   fitness_f= (fun t -> Helpers.cumulative_apply 3 (fun () ->
-	let r = 2 + Random.int 9 in
-	let mul2 = reduce 9 @@ App(t, Church.of_int r) in 
+	let r = 2 + Random.int 4 in
+	let mul2 = reduce 10 @@ App(t, Church.of_int r) in 
 	match mul2 with 
 	| t' when Church.is_church t' -> 
 	let r' = Church.to_int mul2 in
@@ -36,6 +36,6 @@ let s = ga_init {
 	| _ -> 0.0)
   );
   valid_f= (fun t -> 
-    Church.is_church @@ reduce 8 (App(t, Church.of_int 1))
+    Church.is_church @@ reduce 10 (App(t, Church.of_int 1))
   );
 } in ga_print s; ga_steps s;

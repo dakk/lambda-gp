@@ -24,6 +24,7 @@ val to_string: term -> string
 (** [parse s] converts s to a term, or raise InvalidLambdaString on failures *)
 
 val reduce_fix: term -> term
+val reduce_fix_timeout: ?n:int -> term -> term
 val reduce: int -> term -> term
 val has_redex: term -> bool
 val subst: string -> term -> term -> term
