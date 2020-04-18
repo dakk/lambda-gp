@@ -1,0 +1,44 @@
+(executable
+ (name bool_not)
+ (libraries lambda_gp)
+ (modules ("bool_not")))
+
+(executable
+ (name bool_and)
+ (libraries lambda_gp)
+ (modules ("bool_and")))
+
+(executable
+ (name bool_or)
+ (libraries lambda_gp)
+ (modules ("bool_or")))
+
+(executable
+ (name nat_mul2)
+ (libraries lambda_gp)
+ (modules ("nat_mul2")))
+
+(executable
+ (name nat_succ)
+ (libraries lambda_gp)
+ (modules ("nat_succ")))
+
+(executable
+ (name nat_sum)
+ (libraries lambda_gp)
+ (modules ("nat_sum")))
+
+(executable
+ (name f_identity)
+ (libraries lambda_gp)
+ (modules ("f_identity")))
+
+(executable
+ (name identity)
+ (libraries lambda_gp)
+ (modules ("identity")))
+
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))

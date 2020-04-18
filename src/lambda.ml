@@ -1,4 +1,3 @@
-(** A lambda term *)
 type term = 
 	| Var of string 
 	| Abs of (string * term) 
@@ -6,7 +5,6 @@ type term =
 ;;
 
 
-(** Helper function *)
 let rec to_string t = match t with
     Var x -> x
   | Abs (x,t') -> "(λ" ^ x ^ "." ^ to_string t' ^ ")" (* λ *)

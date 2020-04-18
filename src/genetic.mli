@@ -22,9 +22,17 @@ type ga_state = {
   generation: int;
 }
 
-
 val ga_init: ga_settings -> ga_state
+(** [ga_init s] initializes the ga using settings s and returns the initial state *)
+
 val ga_print: ga_state -> unit
+(** [ga_print s] prints the state of the current generation *)
+
 val ga_steps: ga_state -> ga_state
+(** [ga_steps s] evolves n generations and return the resulting state *)
+
 val ga_step: ga_state -> ga_state
+(** [ga_step s] evolves a generation and returns the new state *)
+
 val log: ('a -> 'b, out_channel, unit, unit, unit, unit) format6 -> 'a -> 'b
+(** printf-like function for loggin results *)

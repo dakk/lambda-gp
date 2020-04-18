@@ -72,6 +72,10 @@ let mutate_drop s t =
   (Var (Lambda.get_var @@ Random.int @@ s.settings.var_n - 1))
 ;;
 
+let rec mutate_harvest s t = if Lambda.len t <= s.settings.term_len * 4 then t else 
+  mutate_harvest s @@ mutate_drop s t
+;;
+
 let mutate s t = 
   replace_tree t (Random.int @@ Lambda.len t) 
     (Rand_term.generate_l 
@@ -117,14 +121,15 @@ let select_best s =
   in sl s.population
 ;;
 
+let sort_population p = List.sort (fun x y -> int_of_float @@ (snd y -. snd x) *. 1000000.) p;;
+
 let select_best_parents p n =
   let rec sub l i = match (l,i) with
   | [], _ -> []
   | t::l', 0 -> []
   | t::l', n -> t::(sub l' (n-1))
-  in
-  let sorted = List.sort (fun x y -> int_of_float (snd y *. 10. -. snd x *. 10.0)) p in
-  sub sorted n
+  in sub p n 
+   (* |> sort_population) n *)
 ;;
 
 let rec terms_of_pop p = match p with
@@ -155,7 +160,7 @@ let ga_init s =
   match fitness_stat_of_pop s pop with
   | tl, af, bf -> { 
     settings= s;
-    population= pop;
+    population= pop |> sort_population;
     avg_fitness= af;
     avg_term_len= tl;
     best_fitness= bf;
@@ -164,11 +169,11 @@ let ga_init s =
 ;;
 
 let ga_print s = 
-  List.iter (fun i -> 
+  (* List.iter (fun i -> 
     log "[%d] => [%f] %s (%d)" s.generation (snd i) (Lambda.to_string @@ fst i) (Lambda.len @@ fst i)
-  ) s.population;
+  ) s.population; *)
   log "[%d] => %f best, %f avg, %d avg term len" s.generation s.best_fitness s.avg_fitness s.avg_term_len;
-  printf "\n";
+  (* printf "\n"; *)
   ()
 ;;
 
@@ -196,26 +201,30 @@ let ga_step s =
   let genn = s.generation + 1 in
   let best_parents = select_best_parents s.population (s.settings.pop_size / 2) in
   (* let best_terms = terms_of_pop best_parents in *)
-  let best_terms = terms_of_pop best_parents |> shuffle in
+  let best_terms = terms_of_pop @@ best_parents in
 
   (* Crossover of parents *)
-  let cross_pop = best_terms |> apply_cross in
+  let cross_pop = best_terms |> shuffle |> apply_cross in
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
   |> List.map (fun t -> if (Random.int 100 < 20) then mutate s t else t) 
-  |> List.map (fun t -> if (Random.int 100 < 20) then mutate_drop s t else t)
-  |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t) in
+  (* |> List.map (fun t -> if (Random.int 100 < 50) then mutate_drop s t else t)  *)
+  |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t)
+  |> List.map (fun t -> if (Random.int 100 < 100) then mutate_harvest s t else t) in
+
+
+  (** Visualizza se un element oe' frutto di crossover, mutazione, etc *)
 
   let mut_best_pop = best_terms in
-  (* |> List.map (fun t -> if (Random.int 100 < 6) then mutate s t else t) 
-  |> List.map (fun t -> if (Random.int 100 < 2) then mutate_drop s t else t) 
-  |> List.map (fun t -> if (Random.int 100 < 3) then mutate_redex s t else t) in *)
+  (* |> List.map (fun t -> if (Random.int 100 < 6) then mutate s t else t) *)
+  (* |> List.map (fun t -> if (Random.int 100 < 25) then mutate_drop s t else t) in *)
+  (* |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t) in  *)
   
   let npop = mut_best_pop @ mut_cross_pop in
 
   (** Crop leaving pop_size best *)
-  let npop = select_best_parents (pop_of_terms s npop) s.settings.pop_size in  
+  let npop = select_best_parents (pop_of_terms s npop |> sort_population) s.settings.pop_size in  
 
   match fitness_stat_of_pop s npop with
   | tl, af, bf -> { s with 
