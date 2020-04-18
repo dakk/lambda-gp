@@ -85,26 +85,25 @@ let mutate s t =
 ;;
 
 
-(** A crossover is an exchange of different term tree; this function does k crossovers *)
-let rec crossover (t,t') = 
-  (** find a random subtree of t *)
-  (* printf "CRB1 %s\n" @@ Lambda.to_string t;
-  printf "CRB2 %s\n" @@ Lambda.to_string t'; *)
+let crossover (t,t') = 
+  (* find a random subtree of t *)
+  (* printf "DBG CR 1 => %s\n" @@ Lambda.to_string t;
+  printf "DBG CR 2 =>  %s\n" @@ Lambda.to_string t'; *)
   let pos = Random.int @@ Lambda.len t in
   let it = get_inner_term t pos in
-  (* printf "CRO1 %d %s\n" pos @@ Lambda.to_string it; *)
-  (** find a random subtree of t' *)
+  (* printf "DBG CR Piece1 =>  %d %s\n" pos @@ Lambda.to_string it; *)
+  (* find a random subtree of t' *)
   let pos' = Random.int @@ Lambda.len t' in 
   let it' = get_inner_term t' pos in
-  (* printf "CRO2 %d %s\n" pos' @@ Lambda.to_string it';
-  printf "CROR1 %s\n" @@ Lambda.to_string @@ replace_tree t pos it';
-  printf "CROR2 %s\n\n" @@ Lambda.to_string @@ replace_tree t' pos' it; *)
-  (** exchange them*)
+  (* printf "DBG CR Piece2 => %d %s\n" pos' @@ Lambda.to_string it';
+  printf "DBG CR Result1 => %s\n" @@ Lambda.to_string @@ replace_tree t pos it';
+  printf "DBG CR Result2 => %s\n\n" @@ Lambda.to_string @@ replace_tree t' pos' it; *)
+  (* exchange them*)
   (replace_tree t pos it', replace_tree t' pos' it)
 ;;
 
 
-let fitness_stat_of_pop s p =
+let fitness_stat_of_pop p =
   let rec pop_fitness' p c = match p, c with
   | [], c -> c
   | (t, f)::p', (l, a, b) -> 
@@ -117,6 +116,7 @@ let fitness_stat_of_pop s p =
 
 let select_best s =
   let rec sl p = match p with
+  | [] -> failwith "No best found"
   | (t, f)::p' -> if f = s.best_fitness then (t,f) else sl p'
   in sl s.population
 ;;
@@ -126,7 +126,7 @@ let sort_population p = List.sort (fun x y -> int_of_float @@ (snd y -. snd x) *
 let select_best_parents p n =
   let rec sub l i = match (l,i) with
   | [], _ -> []
-  | t::l', 0 -> []
+  | _::_, 0 -> []
   | t::l', n -> t::(sub l' (n-1))
   in sub p n 
    (* |> sort_population) n *)
@@ -134,7 +134,7 @@ let select_best_parents p n =
 
 let rec terms_of_pop p = match p with
 | [] -> []
-| (t,f)::p' -> t::(terms_of_pop p') 
+| (t,_)::p' -> t::(terms_of_pop p') 
 ;;
 
 let rec pop_of_terms s l = match l with
@@ -142,6 +142,11 @@ let rec pop_of_terms s l = match l with
 | t::l' -> (t, s.settings.fitness_f t)::(pop_of_terms s l')
 ;;
 
+(* let rec fix_size s (tl: Lambda.term list) = match List.length tl with
+| l when l = s.settings.pop_size -> tl
+| l when l > s.settings.pop_size -> fix_size s @@ List.tl tl
+| l when l < s.settings.pop_size -> fix_size s @@ (List.nth tl (Random.int l))::tl
+;; *)
 
 let ga_init s =   
   let rec gen_init_pop l = match l with
@@ -157,7 +162,7 @@ let ga_init s =
   log "init [gens: %d] [pop_size: %d] [var: %d] [len: %d] [target: %f]" s.gen_n s.pop_size s.var_n s.term_len s.fitness_target;
   log "generating random population of %d terms [len: %d, var: %d]" s.pop_size s.term_len s.var_n;
   let pop = gen_init_pop s.pop_size in
-  match fitness_stat_of_pop s pop with
+  match fitness_stat_of_pop pop with
   | tl, af, bf -> { 
     settings= s;
     population= pop |> sort_population;
@@ -177,20 +182,8 @@ let ga_print s =
   ()
 ;;
 
-let rec shuffle = function
-  | [] -> []
-  | [single] -> [single]
-  | list -> 
-    let (before, after) = List.partition (fun elt -> Random.bool ()) list in 
-    List.rev_append (shuffle before) (shuffle after)
-;;
 
 let ga_step s = 
-  let rec fix_size (tl: Lambda.term list) = match List.length tl with
-  | l when l = s.settings.pop_size -> tl
-  | l when l > s.settings.pop_size -> fix_size @@ List.tl tl
-  | l when l < s.settings.pop_size -> fix_size @@ (List.nth tl (Random.int l))::tl
-  in
   let rec apply_cross (tl: Lambda.term list) = match tl with
     [] -> []
   | t::[] -> [t] 
@@ -204,7 +197,7 @@ let ga_step s =
   let best_terms = terms_of_pop @@ best_parents in
 
   (* Crossover of parents *)
-  let cross_pop = best_terms |> shuffle |> apply_cross in
+  let cross_pop = best_terms |> Helpers.shuffle |> apply_cross in
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
@@ -213,20 +206,11 @@ let ga_step s =
   |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t)
   |> List.map (fun t -> if (Random.int 100 < 100) then mutate_harvest s t else t) in
 
-
-  (** Visualizza se un element oe' frutto di crossover, mutazione, etc *)
-
-  let mut_best_pop = best_terms in
-  (* |> List.map (fun t -> if (Random.int 100 < 6) then mutate s t else t) *)
-  (* |> List.map (fun t -> if (Random.int 100 < 25) then mutate_drop s t else t) in *)
-  (* |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t) in  *)
-  
-  let npop = mut_best_pop @ mut_cross_pop in
-
-  (** Crop leaving pop_size best *)
+  let best_pop = best_terms in
+  let npop = best_pop @ mut_cross_pop in
   let npop = select_best_parents (pop_of_terms s npop |> sort_population) s.settings.pop_size in  
 
-  match fitness_stat_of_pop s npop with
+  match fitness_stat_of_pop npop with
   | tl, af, bf -> { s with 
     avg_term_len= tl;
     avg_fitness= af;
