@@ -15,12 +15,20 @@ type ga_settings = {
   gen_n: int;
 };;
 
+
+type actual_best = {
+	score: int;
+	len: int;
+	term: Lambda.term;
+};;
+
 type ga_state = {
   settings: ga_settings;
   population: (Lambda.term * float) list;
   avg_fitness: float;
   avg_term_len: int;
   best_fitness: float;
+  actual_best: actual_best option;
   generation: int;
 };;
 
@@ -123,7 +131,7 @@ let fitness_stat_of_pop p =
 let select_best s =
   let rec sl p = match p with
   | [] -> failwith "No best found"
-  | (t, f)::p' -> if f = s.best_fitness then (t,f) else sl p'
+  | (t, f)::p' -> if f = s.best_fitness then (t |> Lambda.eta_conversion,f) else sl p'
   in sl s.population
 ;;
 
@@ -179,10 +187,18 @@ let ga_init s =
     avg_term_len= tl;
     best_fitness= bf;
     generation= 0;
+    actual_best= None;
   }
 ;;
 
+let print_actual_best s = match s.actual_best with 
+  | None -> ()
+  | Some b -> 
+    log "[%d] => actual_best is (len: %d, score: %d) %s" s.generation b.len b.score (Lambda.to_string b.term)
+;;
+
 let ga_print s = 
+  print_actual_best s;
   (* List.iter (fun i -> 
     log "[%d] => [%f] %s (%d)" s.generation (snd i) (Lambda.to_string @@ fst i) (Lambda.len @@ fst i)
   ) s.population; *)
@@ -224,9 +240,10 @@ let ga_step s =
 
   let best_pop = best_terms in
   let npop = best_pop @ mut_cross_pop in
-  let npop = [select_best s] @
+  let npop = (try [select_best s] with | _-> []) @
   	( (pop_of_terms s npop) |> sort_population |> sublist 0 s.settings.pop_size ) 
-	  @ pop_of_terms s [Rand_term.generate s.settings.term_len s.settings.var_n]
+	  @ pop_of_terms s [Rand_term.generate (s.settings.term_len * 2) s.settings.var_n]
+	  @ pop_of_terms s [Rand_term.generate (s.settings.term_len / 2) s.settings.var_n]
   in  
 
   match fitness_stat_of_pop npop with
@@ -247,22 +264,59 @@ let rec ga_steps s =
     | false -> rt (n-1) succ
     in 
     let success = rt best_times 0 in
-    log "test_best(n: %d) => %d success (%d%%)" best_times success @@ int_of_float((float success) /. 100.0 *. (float best_times))
+    let perc = int_of_float((float success) /. 100.0 *. (float best_times)) in
+    log "test_best(n: %d) => %d success (%d%%)" best_times success perc;
+    perc
+
   in 
   match s.generation with 
   | n when n = s.settings.gen_n -> 
     let (t, f) = select_best s in
     log "best is %s with a fitness of %f" (Lambda.to_string t) f;
-    best_test t s;
-    s
+    let perc = best_test t s in 
+    let s' = { 
+      s with actual_best= Some ({
+        len= Lambda.len t;
+        score= perc;
+        term= t;
+      })
+    } in
+    print_actual_best s';
+    s'
   | _ -> 
     let s' = ga_step s in
     ga_print s';
     let (t, f) = select_best s' in
     if f >= s'.settings.fitness_target then (
+      let rec remove_best p = match p with 
+      | [] -> []
+      | (t',f)::tl when t=t' -> remove_best tl
+      | (t',f)::tl -> (t',f)::(remove_best tl)
+      in
       log "found a best at generation %d" s'.generation;
       log "best is %s with a fitness of %f" (Lambda.to_string t) f;
-      best_test t s';
-      s'
+      let perc = best_test t s' in 
+      match s'.actual_best with 
+      | None -> ga_steps { 
+          s' with 
+          population= remove_best s'.population;
+          best_fitness= 0.0;
+          actual_best= Some ({
+            len= Lambda.len t;
+            score= perc;
+            term= t;
+          })
+        }
+      | Some b when b.term <> t && b.len >= (Lambda.len t) && b.score <= perc -> ga_steps { 
+          s' with 
+          population= remove_best s'.population;
+          best_fitness= 0.0;
+          actual_best= Some ({
+            len= Lambda.len t;
+            score= perc;
+            term= t;
+          })
+        }
+      | _ -> ga_steps s'
     ) else ga_steps s'
 ;;
