@@ -89,10 +89,10 @@ let rec subst x t' t = match t with
       let z = gensym() in Abs(z,subst x t' (subst z (Var y) t0));;
 
 (** α-conversion *)
-let rec conversion a b t = match t with 
+let rec alfa_conversion a b t = match t with 
 	  Var x -> if x=a then Var b else Var x
-  | Abs(x, t') -> Abs((if x=a then b else a), conversion a b t')
-  | App(t', t'') -> App(conversion a b t', conversion a b t'')
+  | Abs(x, t') -> Abs((if x=a then b else a), alfa_conversion a b t')
+  | App(t', t'') -> App(alfa_conversion a b t', alfa_conversion a b t'')
 ;;
 
 (** η-conversion *)

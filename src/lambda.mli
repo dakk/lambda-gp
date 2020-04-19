@@ -27,7 +27,7 @@ val to_string: term -> string
 val eta_conversion: term -> term
 (** [eta_conversion t] applies η-conversion to t, if applicable *)
 
-val conversion: string -> string -> term -> term
+val alfa_conversion: string -> string -> term -> term
 (** [conversion a b t] applies α-conversion to t replacing variable a with variable b *)
 
 val reduce_fix: term -> term

@@ -212,16 +212,22 @@ let ga_step s =
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
-  |> List.map (fun t -> if (Random.int 100 < 20) then mutate s t else t) 
-  (* |> List.map (fun t -> if (Random.int 100 < 50) then mutate_drop s t else t)  *)
-  |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t)
-  |> List.map (fun t -> if (Random.int 100 < 90) then mutate_harvest s t else t)
-  |> List.map (fun t -> if (Random.int 100 < 10) then mutate_random s t else t) in
+    |> List.map (fun t -> if (Random.int 100 < 20) then mutate s t else t) 
+    (* |> List.map (fun t -> if (Random.int 100 < 50) then mutate_drop s t else t)  *)
+    |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 90) then mutate_harvest s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 20) then mutate_random s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 30) then Lambda.eta_conversion t else t)
+    |> List.map (fun t -> if (Random.int 100 < 10) then 
+      Lambda.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t
+	else t) in
 
   let best_pop = best_terms in
   let npop = best_pop @ mut_cross_pop in
   let npop = [select_best s] @
-  	( (pop_of_terms s npop) |> sort_population |> sublist 0 s.settings.pop_size ) in  
+  	( (pop_of_terms s npop) |> sort_population |> sublist 0 s.settings.pop_size ) 
+	  @ pop_of_terms s [Rand_term.generate s.settings.term_len s.settings.var_n]
+  in  
 
   match fitness_stat_of_pop npop with
   | tl, af, bf -> { s with 

@@ -29,6 +29,11 @@
  (modules ("nat_sum")))
 
 (executable
+ (name nat_mul)
+ (libraries lambda_gp)
+ (modules ("nat_mul")))
+
+(executable
  (name f_identity)
  (libraries lambda_gp)
  (modules ("f_identity")))

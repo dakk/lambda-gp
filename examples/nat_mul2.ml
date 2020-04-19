@@ -3,7 +3,7 @@ open Lambda;;
 open Genetic;;
 
 let s = ga_init {
-  pop_size= 64;
+  pop_size= 256;
   term_len= 19;
   var_n= 6;
   gen_n=50000;
@@ -16,7 +16,7 @@ let s = ga_init {
         if res = r * 2 then true else false )
       with | _ -> false
   );
-  fitness_f= (fun t -> Helpers.cumulative_apply 3 (fun () ->
+  fitness_f= (fun t -> Helpers.cumulative_apply 10 (fun () ->
 	let r = 2 + Random.int 4 in
 	let mul2 = reduce 10 @@ App(t, Church.of_int r) in 
 	match mul2 with 
@@ -25,8 +25,8 @@ let s = ga_init {
 	(* Printf.printf "%d %d %d\n%!" r r' (r*2); *)
 	(match r' with
 	| n when r * 2 = n -> 1.0 
-	| n when n < r -> 0.0
-	| n when n > r * 3 -> 0.0
+	| n when n < r -> 0.01
+	| n when n > r * 3 -> 0.01
 	| n -> 
 		let r' = if n > r * 2 then n - r else n in
 		let diff = r * 2 - r' in
