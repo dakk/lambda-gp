@@ -19,7 +19,7 @@ let pair_fitness t =
 
 let s = ga_init {
   pop_size= 32;
-  term_len= 8;
+  term_len= 12;
   var_n= 4;
   gen_n=500000;
   fitness_target= 1.0;

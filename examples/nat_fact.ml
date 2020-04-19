@@ -7,7 +7,7 @@ let rec fact x = if x <= 1 then 1 else x * fact (x - 1);;
 let s = ga_init {
   pop_size= 32;
   term_len= 16;
-  var_n= 6;
+  var_n= 4;
   gen_n=500000;
   fitness_target= 1.0;
   test_best_f= (fun t -> 
