@@ -3,8 +3,8 @@ open Lambda;;
 open Genetic;;
 
 let s = ga_init {
-  pop_size= 32;
-  term_len= 12;
+  pop_size= 16;
+  term_len= 64;
   var_n= 6;
   gen_n=500000;
   fitness_target= 1.0;
@@ -17,7 +17,7 @@ let s = ga_init {
         if res = r1 * r2 then true else false )
       with | _ -> false
   );
-  fitness_f= (fun t -> Helpers.cumulative_apply 8 (fun () ->
+  fitness_f= (fun t -> Helpers.cumulative_apply 4 (fun () ->
     let r1 = 1 + Random.int 4 in
     let r2 = 1 + Random.int 4 in
     let sum = reduce_fix_timeout @@ App(App(t, Church.of_int r1), Church.of_int r2) in 

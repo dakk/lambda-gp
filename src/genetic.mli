@@ -13,12 +13,19 @@ type ga_settings = {
   gen_n: int;
 }
 
+type actual_best = {
+	score: int;
+	len: int;
+	term: Lambda.term;
+}
+
 type ga_state = {
   settings: ga_settings;
   population: (Lambda.term * float) list;
   avg_fitness: float;
   avg_term_len: int;
   best_fitness: float;
+  actual_best: actual_best option;
   generation: int;
 }
 

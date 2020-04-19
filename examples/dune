@@ -34,6 +34,11 @@
  (modules ("nat_mul")))
 
 (executable
+ (name nat_fact)
+ (libraries lambda_gp)
+ (modules ("nat_fact")))
+
+(executable
  (name f_identity)
  (libraries lambda_gp)
  (modules ("f_identity")))

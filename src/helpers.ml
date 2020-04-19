@@ -3,6 +3,11 @@ let rec cumulative_apply n f = match n with
 | n -> (f ()) *. cumulative_apply (n-1) f
 ;;
 
+let rec cumulative_apply_i n f = match n with
+| 0 -> 1.0
+| n -> (f n) *. cumulative_apply_i (n-1) f
+;;
+
 let rec shuffle = function
   | [] -> []
   | [single] -> [single]

@@ -7,7 +7,7 @@ let s = ga_init {
   term_len= 19;
   var_n= 6;
   gen_n=50000;
-  fitness_target= 1.0;
+  fitness_target= 0.99;
   test_best_f= (fun t -> 
       let r = 10 + Random.int 15 in
       try (

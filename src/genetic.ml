@@ -15,12 +15,20 @@ type ga_settings = {
   gen_n: int;
 };;
 
+
+type actual_best = {
+	score: int;
+	len: int;
+	term: Lambda.term;
+};;
+
 type ga_state = {
   settings: ga_settings;
   population: (Lambda.term * float) list;
   avg_fitness: float;
   avg_term_len: int;
   best_fitness: float;
+  actual_best: actual_best option;
   generation: int;
 };;
 
@@ -123,14 +131,14 @@ let fitness_stat_of_pop p =
 let select_best s =
   let rec sl p = match p with
   | [] -> failwith "No best found"
-  | (t, f)::p' -> if f = s.best_fitness then (t,f) else sl p'
+  | (t, f)::p' -> if f = s.best_fitness then (t |> Lambda.eta_conversion,f) else sl p'
   in sl s.population
 ;;
 
 let sort_population p = List.sort (fun x y -> int_of_float @@ (snd y -. snd x) *. 1000000.) p;;
 
 let rec sublist b e l = match l with
-    [] -> failwith "sublist"
+    [] -> []
   | h :: t -> 
     let tail = if e=0 then [] else sublist (b-1) (e-1) t in
     if b>0 then tail else h :: tail
@@ -163,10 +171,8 @@ let ga_init s =
   | _ -> 
     let nt = Rand_term.generate s.term_len s.var_n in 
     (* List.iter (fun x -> printf "%s\n%!" x) @@ Lambda.fv_l nt; *)
-    if Lambda.len nt < s.term_len || not (s.valid_f nt) then 
-      gen_init_pop l 
-    else 
-      [(nt, s.fitness_f nt)] @ gen_init_pop (l-1) 
+    if Lambda.len nt < s.term_len || not (s.valid_f nt) then gen_init_pop l 
+    else (nt, s.fitness_f nt)::(gen_init_pop (l-1))
   in
   log "init [gens: %d] [pop_size: %d] [var: %d] [len: %d] [target: %f]" s.gen_n s.pop_size s.var_n s.term_len s.fitness_target;
   log "generating random population of %d terms [len: %d, var: %d]" s.pop_size s.term_len s.var_n;
@@ -179,10 +185,18 @@ let ga_init s =
     avg_term_len= tl;
     best_fitness= bf;
     generation= 0;
+    actual_best= None;
   }
 ;;
 
+let print_actual_best s = match s.actual_best with 
+  | None -> ()
+  | Some b -> 
+    log "[%d] => actual_best is (len: %d, score: %d) %s" s.generation b.len b.score (Lambda.to_string b.term)
+;;
+
 let ga_print s = 
+  print_actual_best s;
   (* List.iter (fun i -> 
     log "[%d] => [%f] %s (%d)" s.generation (snd i) (Lambda.to_string @@ fst i) (Lambda.len @@ fst i)
   ) s.population; *)
@@ -194,75 +208,82 @@ let ga_print s =
 
 let ga_step s = 
   let rec apply_cross (tl: Lambda.term list) = match tl with
-    [] -> []
-  | t::[] -> 
-    let tcross = crossover (t,t) in
-    (fst tcross)::(snd tcross)::[]
-  | t::t'::tl' ->
-    let tcross = crossover (t,t') in
-    (fst tcross)::(snd tcross)::(apply_cross tl')
+		[] -> []
+	| t::[] -> let tcross = crossover (t,t) in (fst tcross)::(snd tcross)::[]
+	| t::t'::tl' -> let tcross = crossover (t,t') in (fst tcross)::(snd tcross)::(apply_cross tl')
   in
   let genn = s.generation + 1 in
   let best_parents = select_best_parents s.population (s.settings.pop_size / 2) in
-  (* let best_terms = terms_of_pop best_parents in *)
   let best_terms = terms_of_pop @@ best_parents in
 
   (* Crossover of parents *)
-  let cross_pop = ([fst @@ select_best s] @ best_terms) |> Helpers.shuffle |> apply_cross in
+  let cross_pop = ((try [fst @@ select_best s] with | _ -> []) @ best_terms) |> Helpers.shuffle |> apply_cross in
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
     |> List.map (fun t -> if (Random.int 100 < 20) then mutate s t else t) 
     (* |> List.map (fun t -> if (Random.int 100 < 50) then mutate_drop s t else t)  *)
-    |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t)
+    (* |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t) *)
     |> List.map (fun t -> if (Random.int 100 < 90) then mutate_harvest s t else t)
-    |> List.map (fun t -> if (Random.int 100 < 20) then mutate_random s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 20) then mutate_random s t else t) 
     |> List.map (fun t -> if (Random.int 100 < 30) then Lambda.eta_conversion t else t)
-    |> List.map (fun t -> if (Random.int 100 < 10) then 
-      Lambda.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t
-	else t) in
+    |> List.map (fun t -> if (Random.int 100 > 10) then t else 
+      Lambda.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
+  in
 
   let best_pop = best_terms in
   let npop = best_pop @ mut_cross_pop in
-  let npop = [select_best s] @
+  let npop = (try [select_best s] with | _-> []) @
   	( (pop_of_terms s npop) |> sort_population |> sublist 0 s.settings.pop_size ) 
-	  @ pop_of_terms s [Rand_term.generate s.settings.term_len s.settings.var_n]
-  in  
-
-  match fitness_stat_of_pop npop with
+	  @ pop_of_terms s [Rand_term.generate (s.settings.term_len * 2) s.settings.var_n]
+	  @ pop_of_terms s [Rand_term.generate (s.settings.term_len / 2) s.settings.var_n]
+  in match fitness_stat_of_pop npop with
   | tl, af, bf -> { s with 
     avg_term_len= tl;
     avg_fitness= af;
     best_fitness= bf;
     generation= genn;
     population= npop;
-  };;
+  }
+;;
 
 let rec ga_steps s = 
+  let rec remove_best p t = match p with 
+    | [] -> []
+    | (t',f)::tl when t=t' -> remove_best tl t
+    | (t',f)::tl -> (t',f)::(remove_best tl t)
+  in
   let best_test t s' =
-    let best_times = 100 in
-    log "running test_best %d times" best_times;
     let rec rt n succ = if n = 0 then succ else match s'.settings.test_best_f t with
       true -> rt (n-1) (succ+1)
     | false -> rt (n-1) succ
     in 
+    let best_times = 500 in
+    (* log "running test_best %d times" best_times; *)
     let success = rt best_times 0 in
-    log "test_best(n: %d) => %d success (%d%%)" best_times success @@ int_of_float((float success) /. 100.0 *. (float best_times))
+    let perc = int_of_float((float success) *. 100.0 /. (float best_times)) in
+    (* log "test_best(n: %d) => %d success (%d%%)" best_times success perc; *)
+    perc
   in 
-  match s.generation with 
-  | n when n = s.settings.gen_n -> 
-    let (t, f) = select_best s in
-    log "best is %s with a fitness of %f" (Lambda.to_string t) f;
-    best_test t s;
-    s
-  | _ -> 
-    let s' = ga_step s in
-    ga_print s';
+  if s.generation = s.settings.gen_n then (print_actual_best s; s) else (
+    let s' = ga_step s in ga_print s';
     let (t, f) = select_best s' in
-    if f >= s'.settings.fitness_target then (
-      log "found a best at generation %d" s'.generation;
-      log "best is %s with a fitness of %f" (Lambda.to_string t) f;
-      best_test t s';
-      s'
-    ) else ga_steps s'
+    if f < s'.settings.fitness_target then ga_steps s' else (
+      (* log "=> found a new best at generation %d (fitness: %f)" s'.generation f;
+      log "\t=> %s" (Lambda.to_string t); *)
+      let perc = best_test t s' in 
+		  let nactbest = Some ({ len= Lambda.len t; score= perc; term= t; }) in
+      match s'.actual_best with 
+      | None -> ga_steps { s' with 
+        population= remove_best s'.population t;
+      	best_fitness= 0.0;
+        actual_best= nactbest; }
+      | Some b when b.term <> t && ((b.len > (Lambda.len t) && b.score <= perc) || (b.score < perc)) -> ga_steps { 
+        s' with 
+        population= remove_best s'.population t;
+        best_fitness= 0.0;
+        actual_best= nactbest; }
+      | _ -> ga_steps { s' with population=remove_best s'.population t; best_fitness=0.0}
+    )
+  )
 ;;
