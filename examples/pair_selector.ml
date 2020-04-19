@@ -7,10 +7,10 @@ open Bool;;
 let pair a b = App(App(Abs("x",Abs("y",Abs("z",App(App(Var "z",Var "x"),Var "y")))), a), b);;
 
 let selector_fitness t =
-  let a = Church.of_int @@ Random.int 100 in 
-  let b = Church.of_int @@ Random.int 100 in 
+  let a = Church.of_int @@ Random.int 3 in 
+  let b = Church.of_int @@ 3 + (Random.int 3) in 
   let p = pair a b in
-  match reduce 8 @@ App(App(t, p), Bool.ltrue), reduce 8 @@ App(App(t, p), Bool.lfalse) with
+  match reduce_fix_timeout @@ App(App(t, p), Bool.ltrue), reduce_fix_timeout @@ App(App(t, p), Bool.lfalse) with
   | a1, b1 when a1 = a && b1 = b -> 1.0
   | a1, b1 when a1 = a -> 0.5
   | a1, b1 when b1 = b -> 0.5
@@ -18,9 +18,9 @@ let selector_fitness t =
 ;;
 
 let s = ga_init {
-  pop_size= 64;
+  pop_size= 32;
   term_len= 12;
-  var_n= 3;
+  var_n= 6;
   gen_n=500000;
   fitness_target= 1.0;
   test_best_f= (fun t -> (selector_fitness t) = 1.0);

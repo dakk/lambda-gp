@@ -3,7 +3,7 @@ open Lambda;;
 open Genetic;;
 
 let s = ga_init {
-  pop_size= 32;
+  pop_size= 64;
   term_len= 64;
   var_n= 6;
   gen_n=500000;

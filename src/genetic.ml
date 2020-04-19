@@ -192,7 +192,7 @@ let ga_init s =
 let print_actual_best s = match s.actual_best with 
   | None -> ()
   | Some b -> 
-    log "[%d] => actual_best is (len: %d, score: %d) %s" s.generation b.len b.score (Lambda.to_string b.term)
+    log "[%d] => [actual_best] [len: %d, rate: %d%%] => %s" s.generation b.len b.score (Lambda.to_string b.term)
 ;;
 
 let ga_print s = 
@@ -213,6 +213,8 @@ let ga_step s =
 	| t::t'::tl' -> let tcross = crossover (t,t') in (fst tcross)::(snd tcross)::(apply_cross tl')
   in
   let genn = s.generation + 1 in
+
+  (* select best_parent using a probability function *)
   let best_parents = select_best_parents s.population (s.settings.pop_size / 2) in
   let best_terms = terms_of_pop @@ best_parents in
 
@@ -235,15 +237,17 @@ let ga_step s =
   let npop = best_pop @ mut_cross_pop in
   let npop = (try [select_best s] with | _-> []) @
   	( (pop_of_terms s npop) |> sort_population |> sublist 0 s.settings.pop_size ) 
-	  @ pop_of_terms s [Rand_term.generate (s.settings.term_len * 2) s.settings.var_n]
-	  @ pop_of_terms s [Rand_term.generate (s.settings.term_len / 2) s.settings.var_n]
+	  @ pop_of_terms s [
+      Rand_term.generate (s.settings.term_len * 2) (s.settings.var_n + 1);
+      Rand_term.generate (s.settings.term_len / 2) (s.settings.var_n + 1)
+    ]
   in match fitness_stat_of_pop npop with
   | tl, af, bf -> { s with 
     avg_term_len= tl;
     avg_fitness= af;
     best_fitness= bf;
     generation= genn;
-    population= npop;
+    population= npop |> sort_population;
   }
 ;;
 
@@ -259,18 +263,14 @@ let rec ga_steps s =
     | false -> rt (n-1) succ
     in 
     let best_times = 500 in
-    (* log "running test_best %d times" best_times; *)
     let success = rt best_times 0 in
     let perc = int_of_float((float success) *. 100.0 /. (float best_times)) in
-    (* log "test_best(n: %d) => %d success (%d%%)" best_times success perc; *)
     perc
   in 
   if s.generation = s.settings.gen_n then (print_actual_best s; s) else (
     let s' = ga_step s in ga_print s';
     let (t, f) = select_best s' in
     if f < s'.settings.fitness_target then ga_steps s' else (
-      (* log "=> found a new best at generation %d (fitness: %f)" s'.generation f;
-      log "\t=> %s" (Lambda.to_string t); *)
       let perc = best_test t s' in 
 		  let nactbest = Some ({ len= Lambda.len t; score= perc; term= t; }) in
       match s'.actual_best with 
