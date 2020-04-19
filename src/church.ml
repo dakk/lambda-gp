@@ -25,29 +25,4 @@ let convert_to_church t =
   | _ -> raise NotAChurchTerm
 ;;
 
-(* convert_to_church @@ Abs ("y", Abs ("z", Var "a"));;
-convert_to_church @@ Abs ("z", Abs ("c", App (Var "b", App (Var "l", App (Var "a", Var "t")))));; *)
-
-
 let is_church t = try to_int t |> ignore; true with | _ -> false;;
-
-let is_church2 t = try is_church (convert_to_church t) with | _ -> false;;
-let to_int2 t = to_int (convert_to_church t);;
-
-
-(* 
-open Lambda_church;;
-
-let succ = 
-  Abs("n",Abs("f",Abs("x",
-    App(Var "f",(App(App(Var "n",Var "f"),Var "x"))))));;
- 
-let is_zero = 
-  Abs("n",Abs("x",Abs("y",
-    App(App(Var "n",Abs("z",Var "y")),Var "x"))));;
- 
-printf "%s\n" (to_string (reduce_fix (App(is_zero,(church 0)))));;
-printf "%s\n" (to_string (reduce_fix (App(is_zero,(church 1)))));; 
-
-
-*)

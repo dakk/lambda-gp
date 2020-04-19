@@ -129,6 +129,11 @@ unchurch (reducefix (App(succ,(church 1))));;
 let pair = Abs("x",Abs("y",Abs("z",App(App(Var "z",Var "x"),Var "y"))));;
 let fst = Abs("x",App(Var "x",t));;
 let snd = Abs("x",App(Var "x",f));;
+
+(* let list_empty = pair;;
+let push a = App(App(list_empty, list_empty), a);;
+let hd l = fst l;;
+let tl l = snd l;; *)
  
 let t1 = App(snd,App(App(pair,church 0),church 1));;
  

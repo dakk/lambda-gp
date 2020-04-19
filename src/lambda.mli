@@ -24,10 +24,20 @@ val to_string: term -> string
 (** [parse s] converts s to a term, or raise InvalidLambdaString on failures *)
 
 val reduce_fix: term -> term
+(** [reduce_fix t] applies β-reduction until there is no other reduction applicable *)
+
 val reduce_fix_timeout: ?n:int -> term -> term
+(** [reduce_fix_timeout n t] applies β-reduction until there is no other reduction 
+ * 		applicable or until n iterations reached *)
+
 val reduce: int -> term -> term
+(** [reduce n t] applies n steps of β-reduction to t *)
+
 val has_redex: term -> bool
+(** [has_redex t] returns true if t has a β-reduction step *)
+
 val subst: string -> term -> term -> term
+(** [subst v t' t] *)
 
 val len: term -> int
 (** [len t] returns the length of t *)
