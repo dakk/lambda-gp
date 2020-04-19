@@ -87,7 +87,19 @@ let rec subst x t' t = match t with
   | Abs(y,t0) when y!=x && not (member y (fv t')) -> Abs(y, subst x t' t0)
   | Abs(y,t0) when y!=x && member y (fv t') -> 
       let z = gensym() in Abs(z,subst x t' (subst z (Var y) t0));;
-      
+
+(** α-conversion *)
+let rec conversion a b t = match t with 
+	  Var x -> if x=a then Var b else Var x
+  | Abs(x, t') -> Abs((if x=a then b else a), conversion a b t')
+  | App(t', t'') -> App(conversion a b t', conversion a b t'')
+;;
+
+(** η-conversion *)
+let eta_conversion t = match t with
+| Abs(x, App(m, Var y)) when x=y && not (member x @@ fv m) -> m
+| _ -> t
+;;
       
 (** β-reduction *)
 let is_redex t = match t with 

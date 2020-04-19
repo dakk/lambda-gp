@@ -23,6 +23,13 @@ val to_string: term -> string
 (* val parse: string -> term *)
 (** [parse s] converts s to a term, or raise InvalidLambdaString on failures *)
 
+
+val eta_conversion: term -> term
+(** [eta_conversion t] applies η-conversion to t, if applicable *)
+
+val conversion: string -> string -> term -> term
+(** [conversion a b t] applies α-conversion to t replacing variable a with variable b *)
+
 val reduce_fix: term -> term
 (** [reduce_fix t] applies β-reduction until there is no other reduction applicable *)
 
