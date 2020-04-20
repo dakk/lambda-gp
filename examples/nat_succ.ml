@@ -1,5 +1,6 @@
 open Lambda_gp;;
 open Lambda;;
+open L;;
 open Genetic;;
 
 let s = ga_init {

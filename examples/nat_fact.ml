@@ -1,5 +1,6 @@
 open Lambda_gp;;
 open Lambda;;
+open L;;
 open Genetic;;
 
 let rec fact x = if x <= 1 then 1 else x * fact (x - 1);;

@@ -1,15 +1,16 @@
 open Lambda;;
+open L;;
 
 Random.self_init ();;
 
-let rand_var v = Lambda.get_var @@ Random.int v;;
+let rand_var v = L.get_var @@ Random.int v;;
 
 let rec generate d v = match (d, Random.int 3) with
 | (n, _) when n <= 1 -> Var (rand_var v);
 | (_, 0) -> Abs (rand_var v, generate (d-1) v)
 | (_, 1) -> 
   let a = generate (d-2) v in
-  let nd = Lambda.len a in
+  let nd = L.len a in
   App (a, generate nd v)
 | (_, 2) -> Var (rand_var v);
 ;;

@@ -1,11 +1,12 @@
 open Lambda_gp;;
 open Lambda;;
+open L;;
 open Genetic;;
 open Bool;;
 
 let and_fitness t b b' =
   let res = reduce_fix_timeout @@ App(App(t, if b then ltrue else lfalse), if b' then ltrue else lfalse) in
-  (* Printf.printf "%b => %b but %s\n" b (not b) (Lambda.to_string res); *)
+  (* Printf.printf "%b => %b but %s\n" b (not b) (L.to_string res); *)
   match b, b', res with
     | true, true, r when r=ltrue -> 1.0
     | false, true, r when r=lfalse -> 1.0

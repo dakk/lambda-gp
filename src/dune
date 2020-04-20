@@ -1,5 +1,6 @@
 (library
- (name lambda_gp))
+ (name lambda_gp)
+ (libraries lambda))
 
 (env
   (dev

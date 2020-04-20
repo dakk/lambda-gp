@@ -1,6 +1,8 @@
-type fitness_f = Lambda.term -> float
-type valid_f = Lambda.term -> bool
-type test_best_f = Lambda.term -> bool
+open Lambda
+
+type fitness_f = L.term -> float
+type valid_f = L.term -> bool
+type test_best_f = L.term -> bool
 
 type ga_settings = {
   test_best_f: test_best_f;
@@ -16,12 +18,12 @@ type ga_settings = {
 type actual_best = {
 	score: int;
 	len: int;
-	term: Lambda.term;
+	term: L.term;
 }
 
 type ga_state = {
   settings: ga_settings;
-  population: (Lambda.term * float) list;
+  population: (L.term * float) list;
   avg_fitness: float;
   avg_term_len: int;
   best_fitness: float;

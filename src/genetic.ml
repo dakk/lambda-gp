@@ -1,8 +1,9 @@
 open Printf;;
+open Lambda;;
 
-type fitness_f = Lambda.term -> float;;
-type valid_f = Lambda.term -> bool;;
-type test_best_f = Lambda.term -> bool;;
+type fitness_f = L.term -> float;;
+type valid_f = L.term -> bool;;
+type test_best_f = L.term -> bool;;
 
 type ga_settings = {
   test_best_f: test_best_f;
@@ -19,12 +20,12 @@ type ga_settings = {
 type actual_best = {
 	score: int;
 	len: int;
-	term: Lambda.term;
+	term: L.term;
 };;
 
 type ga_state = {
   settings: ga_settings;
-  population: (Lambda.term * float) list;
+  population: (L.term * float) list;
   avg_fitness: float;
   avg_term_len: int;
   best_fitness: float;
@@ -39,16 +40,16 @@ let log s fmt = printf ("<λ-gp> " ^^ s ^^ "\n%!") fmt;;
 let replace_tree t pos it =
   let rec replace_tree' t pos it = 
     if pos = 0 then (0, it) else match t with
-    | Lambda.Var x -> (pos-1, Lambda.Var x)
-    | Lambda.Abs(s, at) -> 
+    | L.Var x -> (pos-1, L.Var x)
+    | L.Abs(s, at) -> 
       let inp = replace_tree' at (pos - 1) it in
-      if fst inp = 0 then (0, Lambda.Abs(s, snd inp)) else (fst inp, Lambda.Abs(s, at))
-    | Lambda.App(at, at') -> 
+      if fst inp = 0 then (0, L.Abs(s, snd inp)) else (fst inp, L.Abs(s, at))
+    | L.App(at, at') -> 
       let inpa = replace_tree' at (pos - 1) it in
-      if fst inpa = 0 then (0, Lambda.App(snd inpa, at')) else 
+      if fst inpa = 0 then (0, L.App(snd inpa, at')) else 
         let inpb = replace_tree' at' (fst inpa) it in
-        if fst inpb = 0 then (0, Lambda.App(at, snd inpb))
-        else (fst inpb, Lambda.App(at, at'))
+        if fst inpb = 0 then (0, L.App(at, snd inpb))
+        else (fst inpb, L.App(at, at'))
   in snd @@ replace_tree' t pos it
 ;;
 
@@ -56,42 +57,42 @@ let replace_tree t pos it =
 let get_inner_term t pos =
   let rec get_inner_term' t pos = 
     if pos = 0 then (0, t) else match t with
-    | Lambda.Var x -> (pos-1, Lambda.Var x)
-    | Lambda.Abs(s, at) -> 
+    | L.Var x -> (pos-1, L.Var x)
+    | L.Abs(s, at) -> 
       let inp = get_inner_term' at (pos - 1) in
-      if fst inp = 0 then (0, Lambda.Abs(s, snd inp)) else (fst inp, Lambda.Abs(s, at))
-    | Lambda.App(at, at') -> 
+      if fst inp = 0 then (0, L.Abs(s, snd inp)) else (fst inp, L.Abs(s, at))
+    | L.App(at, at') -> 
       let inpa = get_inner_term' at (pos - 1) in
-      if fst inpa = 0 then (0, Lambda.App(snd inpa, at')) else 
+      if fst inpa = 0 then (0, L.App(snd inpa, at')) else 
         let inpb = get_inner_term' at' (fst inpa) in
-        if fst inpb = 0 then (0, Lambda.App(at, snd inpb))
-        else (fst inpb, Lambda.App(at, at'))
+        if fst inpb = 0 then (0, L.App(at, snd inpb))
+        else (fst inpb, L.App(at, at'))
   in snd @@ get_inner_term' t pos
 ;;
 
 
 let mutate_random s t =
   replace_tree t 
-  (1 + (Random.int @@ Lambda.len t)) 
+  (1 + (Random.int @@ L.len t)) 
   (Rand_term.generate_l (1 + (Random.int s.settings.term_len)) @@ 1 + (Random.int @@ s.settings.var_n - 1))
 ;;
 
 let mutate_redex s t =
-  Lambda.reduce (Random.int s.settings.var_n) t
+  L.reduce (Random.int s.settings.var_n) t
 ;;
 
 let mutate_drop s t =
   replace_tree t 
-  (Random.int @@ Lambda.len t) 
-  (Var (Lambda.get_var @@ Random.int @@ s.settings.var_n - 1))
+  (Random.int @@ L.len t) 
+  (Var (L.get_var @@ Random.int @@ s.settings.var_n - 1))
 ;;
 
-let rec mutate_harvest s t = if Lambda.len t <= s.settings.term_len * 4 then t else 
+let rec mutate_harvest s t = if L.len t <= s.settings.term_len * 4 then t else 
   mutate_harvest s @@ mutate_drop s t
 ;;
 
 let mutate s t = 
-  replace_tree t (Random.int @@ Lambda.len t) 
+  replace_tree t (Random.int @@ L.len t) 
     (Rand_term.generate_l 
       (1 + (Random.int @@ s.settings.term_len / 2))
       (1 + (Random.int @@ s.settings.var_n - 1))
@@ -101,17 +102,17 @@ let mutate s t =
 
 let crossover (t,t') = 
   (* find a random subtree of t *)
-  (* printf "DBG CR 1 => %s\n" @@ Lambda.to_string t;
-  printf "DBG CR 2 =>  %s\n" @@ Lambda.to_string t'; *)
-  let pos = Random.int @@ Lambda.len t in
+  (* printf "DBG CR 1 => %s\n" @@ L.to_string t;
+  printf "DBG CR 2 =>  %s\n" @@ L.to_string t'; *)
+  let pos = Random.int @@ L.len t in
   let it = get_inner_term t pos in
-  (* printf "DBG CR Piece1 =>  %d %s\n" pos @@ Lambda.to_string it; *)
+  (* printf "DBG CR Piece1 =>  %d %s\n" pos @@ L.to_string it; *)
   (* find a random subtree of t' *)
-  let pos' = Random.int @@ Lambda.len t' in 
+  let pos' = Random.int @@ L.len t' in 
   let it' = get_inner_term t' pos in
-  (* printf "DBG CR Piece2 => %d %s\n" pos' @@ Lambda.to_string it';
-  printf "DBG CR Result1 => %s\n" @@ Lambda.to_string @@ replace_tree t pos it';
-  printf "DBG CR Result2 => %s\n\n" @@ Lambda.to_string @@ replace_tree t' pos' it; *)
+  (* printf "DBG CR Piece2 => %d %s\n" pos' @@ L.to_string it';
+  printf "DBG CR Result1 => %s\n" @@ L.to_string @@ replace_tree t pos it';
+  printf "DBG CR Result2 => %s\n\n" @@ L.to_string @@ replace_tree t' pos' it; *)
   (* exchange them*)
   (replace_tree t pos it', replace_tree t' pos' it)
 ;;
@@ -122,7 +123,7 @@ let fitness_stat_of_pop p =
   | [], c -> c
   | (t, f)::p', (l, a, b) -> 
     if f > b  then 
-      pop_fitness' p' (l + Lambda.len t, a +. f,f) else pop_fitness' p' (l + Lambda.len t, a +. f,b)
+      pop_fitness' p' (l + L.len t, a +. f,f) else pop_fitness' p' (l + L.len t, a +. f,b)
   in 
   match pop_fitness' p (0, 0., 0.) with
   | l, a, b -> (l / List.length p, a /. float(List.length p), b)
@@ -131,7 +132,7 @@ let fitness_stat_of_pop p =
 let select_best s =
   let rec sl p = match p with
   | [] -> failwith "No best found"
-  | (t, f)::p' -> if f = s.best_fitness then (t |> Lambda.eta_conversion,f) else sl p'
+  | (t, f)::p' -> if f = s.best_fitness then (t |> L.eta_conversion,f) else sl p'
   in sl s.population
 ;;
 
@@ -159,7 +160,7 @@ let rec pop_of_terms s l = match l with
 | t::l' -> (t, s.settings.fitness_f t)::(pop_of_terms s l')
 ;;
 
-(* let rec fix_size s (tl: Lambda.term list) = match List.length tl with
+(* let rec fix_size s (tl: L.term list) = match List.length tl with
 | l when l = s.settings.pop_size -> tl
 | l when l > s.settings.pop_size -> fix_size s @@ List.tl tl
 | l when l < s.settings.pop_size -> fix_size s @@ (List.nth tl (Random.int l))::tl
@@ -170,8 +171,8 @@ let ga_init s =
   | 0 -> []
   | _ -> 
     let nt = Rand_term.generate s.term_len s.var_n in 
-    (* List.iter (fun x -> printf "%s\n%!" x) @@ Lambda.fv_l nt; *)
-    if Lambda.len nt < s.term_len || not (s.valid_f nt) then gen_init_pop l 
+    (* List.iter (fun x -> printf "%s\n%!" x) @@ L.fv_l nt; *)
+    if L.len nt < s.term_len || not (s.valid_f nt) then gen_init_pop l 
     else (nt, s.fitness_f nt)::(gen_init_pop (l-1))
   in
   log "init [gens: %d] [pop_size: %d] [var: %d] [len: %d] [target: %f]" s.gen_n s.pop_size s.var_n s.term_len s.fitness_target;
@@ -192,13 +193,13 @@ let ga_init s =
 let print_actual_best s = match s.actual_best with 
   | None -> ()
   | Some b -> 
-    log "[%d] => [actual_best] [len: %d, rate: %d%%] => %s" s.generation b.len b.score (Lambda.to_string b.term)
+    log "[%d] => [actual_best] [len: %d, rate: %d%%] => %s" s.generation b.len b.score (L.to_string b.term)
 ;;
 
 let ga_print s = 
   print_actual_best s;
   (* List.iter (fun i -> 
-    log "[%d] => [%f] %s (%d)" s.generation (snd i) (Lambda.to_string @@ fst i) (Lambda.len @@ fst i)
+    log "[%d] => [%f] %s (%d)" s.generation (snd i) (L.to_string @@ fst i) (L.len @@ fst i)
   ) s.population; *)
   log "[%d] => %f best, %f avg, %d avg term len" s.generation s.best_fitness s.avg_fitness s.avg_term_len;
   (* printf "\n"; *)
@@ -207,7 +208,7 @@ let ga_print s =
 
 
 let ga_step s = 
-  let rec apply_cross (tl: Lambda.term list) = match tl with
+  let rec apply_cross (tl: L.term list) = match tl with
 		[] -> []
 	| t::[] -> let tcross = crossover (t,t) in (fst tcross)::(snd tcross)::[]
 	| t::t'::tl' -> let tcross = crossover (t,t') in (fst tcross)::(snd tcross)::(apply_cross tl')
@@ -228,9 +229,9 @@ let ga_step s =
     (* |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t) *)
     |> List.map (fun t -> if (Random.int 100 < 90) then mutate_harvest s t else t)
     |> List.map (fun t -> if (Random.int 100 < 20) then mutate_random s t else t) 
-    |> List.map (fun t -> if (Random.int 100 < 30) then Lambda.eta_conversion t else t)
+    |> List.map (fun t -> if (Random.int 100 < 30) then L.eta_conversion t else t)
     |> List.map (fun t -> if (Random.int 100 > 10) then t else 
-      Lambda.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
+      L.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
   in
 
   let best_pop = best_terms in
@@ -272,13 +273,13 @@ let rec ga_steps s =
     let (t, f) = select_best s' in
     if f < s'.settings.fitness_target then ga_steps s' else (
       let perc = best_test t s' in 
-		  let nactbest = Some ({ len= Lambda.len t; score= perc; term= t; }) in
+		  let nactbest = Some ({ len= L.len t; score= perc; term= t; }) in
       match s'.actual_best with 
       | None -> ga_steps { s' with 
         population= remove_best s'.population t;
       	best_fitness= 0.0;
         actual_best= nactbest; }
-      | Some b when b.term <> t && ((b.len > (Lambda.len t) && b.score <= perc) || (b.score < perc)) -> ga_steps { 
+      | Some b when b.term <> t && ((b.len > (L.len t) && b.score <= perc) || (b.score < perc)) -> ga_steps { 
         s' with 
         population= remove_best s'.population t;
         best_fitness= 0.0;
