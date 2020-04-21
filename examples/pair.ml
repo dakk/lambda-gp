@@ -19,12 +19,12 @@ let pair_fitness t =
 ;;
 
 let s = ga_init {
-  pop_size= 256;
+  pop_size= 512;
   term_len= 12;
   var_n= 3;
   gen_n=500000;
   fitness_target= 1.0;
   test_best_f= (fun t -> (pair_fitness t) = 1.0);
-  fitness_f= (fun t -> Helpers.cumulative_apply 16 (fun () -> pair_fitness t));
+  fitness_f= (fun t -> Helpers.cumulative_apply 32 (fun () -> pair_fitness t));
   valid_f= (fun t -> true);
 } in ga_print s; ga_steps s; 

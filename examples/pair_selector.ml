@@ -25,6 +25,6 @@ let s = ga_init {
   gen_n=500000;
   fitness_target= 1.0;
   test_best_f= (fun t -> (selector_fitness t) = 1.0);
-  fitness_f= (fun t -> Helpers.cumulative_apply 32 (fun () -> selector_fitness t));
+  fitness_f= (fun t -> Helpers.cumulative_apply 128 (fun () -> selector_fitness t));
   valid_f= (fun t -> true);
 } in ga_print s; ga_steps s; 

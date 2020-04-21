@@ -150,9 +150,27 @@ let rec sublist b e l = match l with
     if b>0 then tail else h :: tail
 ;;
 
-let select_best_parents p n =
+let selection p n =
   sublist 0 n p
    (* |> sort_population) n *)
+;;
+
+
+let selection2 p n =
+  let rec selection' p n = 
+    let rec select p r = match p with 
+    | [] -> failwith "none"
+    | (nf, x)::p' when nf > r -> x
+    | a::p' -> try select p' r with | _ -> snd a
+    in
+    let r = Random.float 1.0 in
+    if n = 0 then [] else (select p r)::selection' p (n-1)
+  in
+  let p = List.rev p in
+  let fsum = List.fold_left (fun y x -> (snd x)+.y) 0.0 p in
+  let p = List.map (fun x -> (snd x /. fsum, x)) p in
+  let pacc = List.fold_left (fun y x -> (fst x +. (if List.length y = 0 then 0.0 else fst @@ List.hd y), snd x)::y) [] p in
+  selection' pacc n
 ;;
 
 let rec terms_of_pop p = match p with
@@ -221,11 +239,11 @@ let ga_step s =
   let genn = s.generation + 1 in
 
   (* select best_parent using a probability function *)
-  let best_parents = select_best_parents s.population (s.settings.pop_size / 2) in
-  let best_terms = terms_of_pop @@ best_parents in
+  let selected_pop = selection s.population (s.settings.pop_size / 2) in
+  let selected_terms = terms_of_pop @@ selected_pop in
 
   (* Crossover of parents *)
-  let cross_pop = ((try [fst @@ select_best s] with | _ -> []) @ best_terms) |> Helpers.shuffle |> apply_cross in
+  let cross_pop = ((try [fst @@ select_best s] with | _ -> []) @ selected_terms) |> Helpers.shuffle |> apply_cross in
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
@@ -240,8 +258,7 @@ let ga_step s =
       L.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
   in
 
-  let best_pop = best_terms in
-  let npop = best_pop @ mut_cross_pop in
+  let npop = selected_terms @ mut_cross_pop in
   let npop = (try [select_best s] with | _-> []) @
   	( (pop_of_terms s npop) |> sort_population |> sublist 0 s.settings.pop_size ) 
 	  @ pop_of_terms s [

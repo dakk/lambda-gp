@@ -29,6 +29,11 @@
  (modules ("nat_succ")))
 
 (executable
+ (name nat_pred)
+ (libraries lambda_gp)
+ (modules ("nat_pred")))
+
+(executable
  (name nat_sum)
  (libraries lambda_gp)
  (modules ("nat_sum")))

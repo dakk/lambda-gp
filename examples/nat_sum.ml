@@ -6,7 +6,7 @@ open Genetic;;
 
 
 let s = ga_init {
-  pop_size= 256;
+  pop_size= 128;
   term_len= 64;
   var_n= 6;
   gen_n=500000;
@@ -21,8 +21,8 @@ let s = ga_init {
     with | _ -> false
   );
   fitness_f= (fun t -> Helpers.cumulative_apply 5 (fun () ->
-    let r1 = 1 + Random.int 16 in
-    let r2 = 1 + Random.int 16 in
+    let r1 = 1 + Random.int 12 in
+    let r2 = 1 + Random.int 12 in
     let sum = reduce_fix_timeout @@ App(App(t, Church.of_int r1), Church.of_int r2) in 
     match sum with 
     | t' when not (Church.is_church t') -> 0.0
