@@ -4,7 +4,7 @@ open L;;
 open Genetic;;
 open Bool;;
 
-let id_fitness t = if (reduce 2 @@ App(t, t)) = t then 1.0 else 0.0;;
+let id_fitness t = if (reduce_fix_timeout @@ App(t, t)) = t then 1.0 else 0.0;;
 
 let s = ga_init {
   pop_size= 6;

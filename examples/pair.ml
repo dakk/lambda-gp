@@ -8,8 +8,8 @@ let fst = Abs("x",App(Var "x",Bool.ltrue));;
 let snd = Abs("x",App(Var "x",Bool.lfalse));;
 
 let pair_fitness t =
-  let a = Church.of_int @@ Random.int 3 in 
-  let b = Church.of_int @@ 3 + (Random.int 3) in 
+  let a = Bool.of_bool @@ Random.bool () in 
+  let b = Bool.of_bool @@ Random.bool () in 
   let p = App(App(t, a), b) in
   match reduce_fix_timeout (App(fst, p)), reduce_fix_timeout (App(snd, p)) with
   | a1, b1 when a1 = a && b1 = b -> 1.0
@@ -19,9 +19,9 @@ let pair_fitness t =
 ;;
 
 let s = ga_init {
-  pop_size= 32;
+  pop_size= 256;
   term_len= 12;
-  var_n= 4;
+  var_n= 3;
   gen_n=500000;
   fitness_target= 1.0;
   test_best_f= (fun t -> (pair_fitness t) = 1.0);

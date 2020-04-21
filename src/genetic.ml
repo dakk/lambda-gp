@@ -81,6 +81,11 @@ let mutate_redex s t =
   L.reduce (Random.int s.settings.var_n) t
 ;;
 
+let u = L.Abs("x",Abs("y",App(Var "y",App(App(Var "x",Var "x"),Var "y"))));;
+let theta = L.App(u,u);;
+
+let mutate_fp s t = L.App(theta, t);;
+
 let mutate_drop s t =
   replace_tree t 
   (Random.int @@ L.len t) 
@@ -230,6 +235,7 @@ let ga_step s =
     |> List.map (fun t -> if (Random.int 100 < 90) then mutate_harvest s t else t)
     |> List.map (fun t -> if (Random.int 100 < 20) then mutate_random s t else t) 
     |> List.map (fun t -> if (Random.int 100 < 30) then L.eta_conversion t else t)
+    |> List.map (fun t -> if (Random.int 100 < 10) then mutate_fp s t else t)
     |> List.map (fun t -> if (Random.int 100 > 10) then t else 
       L.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
   in

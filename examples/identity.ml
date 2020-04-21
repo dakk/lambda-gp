@@ -6,7 +6,7 @@ open Bool;;
 
 let id_fitness t =
   let i = if Random.bool () then ltrue else lfalse in
-  let res = reduce 4 @@ App(t, i) in
+  let res = reduce_fix_timeout @@ App(t, i) in
   if res = i then 1.0 else 0.0
 ;;
 

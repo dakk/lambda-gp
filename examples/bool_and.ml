@@ -3,6 +3,9 @@ open Lambda;;
 open L;;
 open Genetic;;
 open Bool;;
+open Lambda;;
+open L;;
+
 
 let and_fitness t b b' =
   let res = reduce_fix_timeout @@ App(App(t, if b then ltrue else lfalse), if b' then ltrue else lfalse) in

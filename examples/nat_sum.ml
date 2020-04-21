@@ -3,15 +3,17 @@ open Lambda;;
 open L;;
 open Genetic;;
 
+
+
 let s = ga_init {
-  pop_size= 64;
+  pop_size= 256;
   term_len= 64;
   var_n= 6;
   gen_n=500000;
   fitness_target= 1.0;
   test_best_f= (fun t -> 
-    let r1 = 1 + Random.int 4 in
-    let r2 = 1 + Random.int 4 in
+    let r1 = 1 + Random.int 16 in
+    let r2 = 1 + Random.int 16 in
     try (
       let sum = reduce_fix_timeout @@ App(App(t, Church.of_int r1), Church.of_int r2) in 
       let res = Church.to_int sum in
@@ -19,8 +21,8 @@ let s = ga_init {
     with | _ -> false
   );
   fitness_f= (fun t -> Helpers.cumulative_apply 5 (fun () ->
-    let r1 = 1 + Random.int 3 in
-    let r2 = 1 + Random.int 3 in
+    let r1 = 1 + Random.int 16 in
+    let r2 = 1 + Random.int 16 in
     let sum = reduce_fix_timeout @@ App(App(t, Church.of_int r1), Church.of_int r2) in 
     match sum with 
     | t' when not (Church.is_church t') -> 0.0

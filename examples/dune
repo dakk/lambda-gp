@@ -19,6 +19,11 @@
  (modules ("nat_mul2")))
 
 (executable
+ (name nat_mul3)
+ (libraries lambda_gp)
+ (modules ("nat_mul3")))
+
+(executable
  (name nat_succ)
  (libraries lambda_gp)
  (modules ("nat_succ")))
