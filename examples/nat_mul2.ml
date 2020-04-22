@@ -5,7 +5,7 @@ open Genetic;;
 
 let s = ga_init {
   pop_size= 256;
-  term_len= 19;
+  term_len= 24;
   var_n= 6;
   gen_n=50000;
   fitness_target= 0.99;

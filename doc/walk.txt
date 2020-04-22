@@ -1,0 +1,35 @@
+dopo aver predisposto il generatore per utilizzare il lambda calcolo non tipato, molto spesso
+vengono generati delle funzioni non riducibili prive di significato; 
+
+possiamo incrementare l'affidabilita' della generazione introducendo un lambda calcolo tipato;
+partiamo da un sistema base con solo due tipi, uno per le funzioni ed un altro per un valore 
+costante:
+
+- t -> t
+- unit
+
+il typechecker e' molto semplice, ma ci consente di verificare che un programma:
+
+- non faccia app su un symbolo che non rappresenta una funzione
+- le funzioni ricevano il tipo corretto
+
+qualche problema sorge quando cerchiamo di definire il fixed point dato che in \\x.(x x)
+non esiste un tipo valido per x.
+
+\\x:u->u.(x x)
+
+per poter definire la ricorsione abbiamo due solo strade:
+- introdurre un tipo ricorsivo
+- introdurre un nuovo simbolo fix
+
+scegliamo la strada del tipo, cosi' da non cambiare la semantica delle riduzioni ma solo del typecherer;
+definiamo nuovo tipo TRecFun in modo che possiamo definire un tipo dove il risultato
+e' il tipo stesso, come in quest caso
+
+\\x:(rec u->u).(x x)
+
+Abs("x", TRecFun(TFun(TUnit -> TUnit)), App(Var "x", Var "x"))
+
+sembra funzionare, e' solo un casino tipizzare le cose
+
+
