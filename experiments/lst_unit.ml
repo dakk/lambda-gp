@@ -215,6 +215,8 @@ let dump_term t =
 ;;
 
 
+dump_term (Abs("x", TUnit, Var "y"));;
+
 dump_term (Abs("x", TFun(TUnit, TUnit), App(Var "x", Unit)));;
 
 let t = Abs("x", TUnit, Abs("y",TUnit, Var "x"));;

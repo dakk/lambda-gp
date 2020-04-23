@@ -6,9 +6,9 @@ open Genetic;;
 
 
 let s = ga_init {
-  pop_size= 128;
-  term_len= 64;
-  var_n= 7;
+  pop_size= 64;
+  term_len= 96;
+  var_n= 8;
   gen_n=500000;
   fitness_target= 1.0;
   test_best_f= (fun t -> 

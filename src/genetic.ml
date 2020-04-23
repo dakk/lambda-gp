@@ -1,4 +1,5 @@
 open Printf;;
+open Helpers;;
 open Lambda;;
 
 type fitness_f = L.term -> float;;
@@ -195,7 +196,7 @@ let ga_init s =
   | _ -> 
     let nt = Rand_term.generate s.term_len s.var_n in 
     (* List.iter (fun x -> printf "%s\n%!" x) @@ L.fv_l nt; *)
-    if L.len nt < s.term_len || not (s.valid_f nt) then gen_init_pop l 
+    if L.len nt < s.term_len || not (s.valid_f nt) || not (check_term_bound nt) then gen_init_pop l 
     else (nt, s.fitness_f nt)::(gen_init_pop (l-1))
   in
   log "init [gens: %d] [pop_size: %d] [var: %d] [len: %d] [target: %f]" s.gen_n s.pop_size s.var_n s.term_len s.fitness_target;
@@ -229,12 +230,18 @@ let ga_print s =
   ()
 ;;
 
+let return_bounded t' t  = if check_term_bound t then t else t';;
 
 let ga_step s = 
+  let rec cross_valid t t' = 
+    let tcross = crossover (t,t') in
+    if not (check_term_bound @@ fst tcross) || not (check_term_bound @@ snd tcross) 
+    then cross_valid t t' else tcross
+  in
   let rec apply_cross (tl: L.term list) = match tl with
 		[] -> []
-	| t::[] -> let tcross = crossover (t,t) in (fst tcross)::(snd tcross)::[]
-	| t::t'::tl' -> let tcross = crossover (t,t') in (fst tcross)::(snd tcross)::(apply_cross tl')
+	| t::[] -> let tcross = cross_valid t t in (fst tcross)::(snd tcross)::[]
+	| t::t'::tl' -> let tcross = cross_valid t t in (fst tcross)::(snd tcross)::(apply_cross tl')
   in
   let genn = s.generation + 1 in
 
@@ -247,15 +254,16 @@ let ga_step s =
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
-    |> List.map (fun t -> if (Random.int 100 < 20) then mutate s t else t) 
+    |> List.map (fun t -> if (Random.int 100 < 20) then return_bounded t @@ mutate s t else t) 
     (* |> List.map (fun t -> if (Random.int 100 < 50) then mutate_drop s t else t)  *)
     (* |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t) *)
-    |> List.map (fun t -> if (Random.int 100 < 90) then mutate_harvest s t else t)
-    |> List.map (fun t -> if (Random.int 100 < 20) then mutate_random s t else t) 
-    |> List.map (fun t -> if (Random.int 100 < 30) then L.eta_conversion t else t)
-    |> List.map (fun t -> if (Random.int 100 < 10) then mutate_fp s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 95) then return_bounded t @@ mutate_harvest s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 20) then fix_term_unbound @@ mutate_random s t else t) 
+    |> List.map (fun t -> if (Random.int 100 < 30) then return_bounded t @@ L.eta_conversion t else t)
+    |> List.map (fun t -> if (Random.int 100 < 10) then return_bounded t @@ mutate_fp s t else t)
     |> List.map (fun t -> if (Random.int 100 > 10) then t else 
-      L.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
+      return_bounded t @@ L.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
+    (* |> List.map (fun t -> if check_term_bound t then t else fix_term_unbound t) *)
   in
 
   let npop = selected_terms @ mut_cross_pop in

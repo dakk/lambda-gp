@@ -6,3 +6,7 @@ val cumulative_apply_i: int -> (int -> float) -> float
 
 val shuffle: 'a list -> 'a list
 (** [shuffle l] shuffles list l *)
+
+val check_term_bound: Lambda.L.term -> bool
+
+val fix_term_unbound: Lambda.L.term -> Lambda.L.term
