@@ -28,8 +28,20 @@ e' il tipo stesso, come in quest caso
 
 \\x:(rec u->u).(x x)
 
-Abs("x", TRecFun(TFun(TUnit -> TUnit)), App(Var "x", Var "x"))
+Abs("x", TRecFun(TUnit), App(Var "x", Var "x"));;
 
-sembra funzionare, e' solo un casino tipizzare le cose
+quindi x e' una funzione che riceve come parametro una funzione che ritorna una funzione dello stesso tipo.
+((unit → ...) → (unit → ...))
 
+sembra funzionare, e' solo un casino tipizzare le cose.
 
+una volta fatto il tutto possiamo scrivere una grammatica generativa (potremmo usare lsystem)
+per generare programmi validi tipizzati. per aggiungere casualita' usiamo la variante stocastica
+(dove per ogni simbolo root possiamo avere piu' regole con diverse probabilita'); sicuramente
+dovremmo oltre a questo anche integrare il context sensitive per usare solo variabili gia' nell'ambiente.
+
+(potremmo scrivere un paper solo su questo volendo)
+
+TODO: integrare il typechecker nel reducer?
+
+continuare a fixare le funzioni esempio

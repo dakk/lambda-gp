@@ -13,14 +13,16 @@ type term =
   | App of term * term
 ;;
 
-let tnat = TFun (TUnit, TFun (TUnit, TUnit));;
+(* these are types for bool and church numbers *)
+let tnat = TFun (TFun(TUnit, TUnit), TFun (TUnit, TUnit));;
 let tbool = TFun (TUnit, TFun (TUnit, TUnit));;
 
 let rec type_to_string tt = match tt with
+  (* first two are just sugar for better representation *)
     TFun (TFun(TUnit, TUnit), TFun(TUnit, TUnit)) -> "nat"
   | TFun (TUnit, TFun (TUnit, TUnit)) -> "bool"
-  | TFun (t, t') -> "(" ^ type_to_string t ^ " → " ^ type_to_string t' ^ ")"
   | TUnit -> "unit"
+  | TFun (t, t') -> "(" ^ type_to_string t ^ " → " ^ type_to_string t' ^ ")"
   | TRecFun (t) -> let tt = type_to_string t in "(" ^ tt ^ " → ...)"
 ;;
 
@@ -40,18 +42,28 @@ let rec to_string t =
 
 exception TypeError of string;;
 
-let rec typeof_env t env = match t with
+let rec typeof_env t env = 
+  let rec inner_trec t = match t with
+  | TFun(a, _) -> inner_trec a
+  | TRecFun(a) -> a
+  | _ -> t
+  in
+  let type_eq t t' env = match t, t' with 
+  | TRecFun(a), b -> a=(inner_trec b)
+    | _, _ -> t=t'
+  in
+  match t with
     Var v -> (match List.mem_assoc v env with 
     | true -> List.assoc v env
     | false -> raise (TypeError ("symbol " ^ v ^ " not present in env")))
   | Unit -> TUnit
   | Abs (x, t, t') -> TFun(t, typeof_env t' @@ (x, t)::env)
   | App (f, p) -> 
-    (* Printf.printf "%s (%s)\n" (type_to_string @@ typeof_env f env) (type_to_string @@ typeof_env p env); *)
+    Printf.printf "%s (%s)\n" (type_to_string @@ typeof_env f env) (type_to_string @@ typeof_env p env);
     (match typeof_env f env, typeof_env p env with
-      TFun(it, ot), TFun(it', ot') -> ot
-    | TFun (it, ot), it' when it=it' -> ot
-    | TFun (it, ot), it' when it<>it' -> raise (TypeError ("type mismatch; expected " ^ type_to_string it ^ " got " ^ type_to_string it'))
+    | TFun (it, ot), it' when type_eq it it' env -> ot
+      (* Printf.printf "%s %s\n" (type_to_string @@ it)  (type_to_string @@ it'); ot *)
+    | TFun (it, ot), it' when not (type_eq it it' env) -> raise (TypeError ("type mismatch; expected " ^ type_to_string it ^ " got " ^ type_to_string it'))
     | TRecFun(it), it' when it'=TRecFun(it) -> TRecFun(it)
     | TRecFun(it), it' -> raise (TypeError ("rec type mismatch " ^ type_to_string it ^ " but " ^ type_to_string it'))
     | _ -> raise (TypeError ("cannot apply: not a function"))
@@ -167,6 +179,7 @@ let reduce_fix t =
   reduce_fix' t
 ;;
 
+
 let reduce_fix_timeout ?(n=128) t = 
   let rec subst' x t' t n' = if n' = 0 then t else match t with
     Var y -> if x=y then t' else Var y
@@ -197,17 +210,24 @@ let rec len t = match t with
 | App (t', t'') -> 1 + len t' + len t''
 ;;
 
+let dump_term t =
+  Printf.printf "- : %s = %s\n" (type_to_string @@ typeof t) (to_string t)
+;;
 
 
-type_to_string @@ typeof (Abs("x", TFun(TUnit, TUnit), App(Var "x", Unit)));;
+dump_term (Abs("x", TFun(TUnit, TUnit), App(Var "x", Unit)));;
 
 let t = Abs("x", TUnit, Abs("y",TUnit, Var "x"));;
 let f = Abs("x", TUnit, Abs("y",TUnit, Var "y"));;
+
+dump_term t;;
+dump_term f;;
 
 let rec iter f x n = if n=0 then x else App(f,(iter f x (n-1)));;
 let church n = Abs("f", TFun(TUnit, TUnit), Abs("x", TUnit, iter (Var "f") (Var "x") n));;
 
 (* typeof of church is TFun (TFun (TUnit, TUnit), TFun (TUnit, TUnit)) *)
+dump_term @@ church 12;;
 
 exception Error;;
 
@@ -224,7 +244,14 @@ let succ =
       Abs("x", TUnit,
         App(Var "f",(App(App(Var "n",Var "f"),Var "x"))))));;
 
-type_to_string @@ typeof succ;;
+dump_term succ;;
+
+(* following should fail! *)
+dump_term @@ reduce_fix (App(succ, t));; 
+dump_term @@ reduce_fix (App(succ, f));;
+
+(* following should run! *)
+dump_term @@ reduce_fix (App(succ, church 0));;
 
 let iszero = 
     Abs("n",typeof @@ church 0, 
@@ -240,11 +267,11 @@ let iszero =
       )
     );; 
 
-type_to_string @@ typeof iszero;;
+dump_term iszero;;
 
-to_string @@ reduce_fix @@ App(iszero, church 0);;
-to_string @@ reduce_fix @@ App(iszero, church 1);;
-to_string @@ reduce_fix @@ App(succ, church 1);;
+dump_term @@ reduce_fix @@ App(iszero, church 0);;
+dump_term @@ reduce_fix @@ App(iszero, church 1);;
+dump_term @@ reduce_fix @@ App(succ, church 1);;
 
 
 
@@ -278,10 +305,11 @@ type_to_string @@ typeof ift;;
 
 
 (** Pairs *)
-let pair = 
-  Abs("x", TUnit,
-    Abs("y", TUnit,
-      Abs("z", TFun(TUnit, TFun(TUnit, TUnit)),
+
+let pair_of ty = 
+  Abs("x", ty,
+    Abs("y", ty,
+      Abs("z", TFun(ty, TFun(ty, TUnit)),
         App(
           App(Var "z",Var "x"),
           Var "y")
@@ -289,14 +317,33 @@ let pair =
       )
     );;
 
-let tpair = TFun (TUnit, TFun (TUnit, TFun (TFun (TUnit, TFun (TUnit, TUnit)), TUnit)));;
+dump_term @@ pair_of tnat;;
 
-typeof pair;;
+let tpair_of ty = typeof @@ pair_of ty;;
 
-let fst = Abs("x", TFun(tbool, tnat), App(Var "x",t));;
-typeof fst;;
-let snd = Abs("x", TFun(tbool, tnat), App(Var "x",f));;
-typeof snd;;
+let fst ty = Abs("x", TFun(tbool, ty), App(Var "x", t));;
+dump_term @@ fst tnat;;
+
+
+
+dump_term @@ pair_of TUnit;;
+
+let fst ty = Abs("x", tpair_of ty, App(Var "x", t));;
+dump_term @@ fst TUnit;;
+
+dump_term @@ pair_of tnat;;
+dump_term @@ pair_of tbool;;
+
+let fst ty = Abs("x", ty, App(Var "x", t));;
+dump_term @@ fst tnat;;
+let snd ty = Abs("x", ty, App(Var "x", f));;
+dump_term @@ snd tbool;;
+
+dump_term @@ reduce_fix @@ App(fst tbool, App(App(pair_of tbool, t), f));;
+dump_term @@ reduce_fix @@ App(snd tbool, App(App(pair_of tbool, t), f));;
+
+dump_term @@ reduce_fix @@ App(fst tnat, App(App(pair_of tnat, church 12), church 24));;
+dump_term @@ reduce_fix @@ App(snd tnat, App(App(pair_of tnat, church 12), church 24));;
 
 (* let list_empty = pair;;
 let push a = App(App(list_empty, list_empty), a);;
@@ -308,28 +355,28 @@ let t1 = App(snd,App(App(pair,church 0),church 1));;
 unchurch (reduce_fix t1);; *)
 
 (** Pred *)
-let z = App(App(pair,church 0),church 0);;
-typeof z;;
+let z = App(App(pair_of tnat,church 0),church 0);;
+dump_term z;;
 
 let s = 
-  Abs("x", TFun(tbool, TUnit),
+  Abs("x", TFun(TUnit, TUnit),
     App(
       App(
-        pair,
-        App(snd,Var "x")
+        pair_of @@ TFun(TUnit, TUnit),
+        App(snd @@ TFun(TUnit, TUnit),Var "x")
       ),
       App(
         succ,
-        App(snd,Var "x")
+        App(snd @@ TFun(TUnit, TUnit),Var "x")
       )
     )
   );;
-typeof s;;
+dump_term @@ s;;
  
-unchurch (reduce_fix (App(snd,App(s,App(s,z)))));;
+unchurch (reduce_fix (App(snd tnat,App(s,App(s,z)))));;
  
-let pred = Abs("n",tnat,App(fst,App(App(Var "n",s),z)));; 
-typeof pred;;
+let pred = Abs("n",tnat,App(fst tnat,App(App(Var "n",s),z)));; 
+dump_term pred;;
 
 
 (** ABS *)
