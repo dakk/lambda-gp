@@ -4,7 +4,7 @@ open L;;
 open Genetic;;
 
 let s = ga_init {
-  pop_size= 256;
+  pop_size= 128;
   term_len= 24;
   var_n= 6;
   gen_n=50000;
@@ -17,7 +17,7 @@ let s = ga_init {
       if res = r * 2 then true else false )
     with | _ -> false
   );
-  fitness_f= (fun t -> Helpers.cumulative_apply 10 (fun () ->
+  fitness_f= (fun t -> Helpers.cumulative_apply 5 (fun () ->
     let r = 1 + Random.int 25 in
     let mul2 = reduce_fix_timeout @@ App(t, Church.of_int r) in 
     match mul2 with 
@@ -37,6 +37,6 @@ let s = ga_init {
         rr)
   ));
   valid_f= (fun t -> 
-    Church.is_church @@ reduce 10 (App(t, Church.of_int 1))
+    Church.is_church @@ reduce_fix_timeout (App(t, Church.of_int 1))
   );
 } in ga_print s; ga_steps s;

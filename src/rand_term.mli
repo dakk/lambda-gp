@@ -8,3 +8,6 @@ val generate: int -> int -> L.term
 
 val generate_l: int -> int -> L.term
 (** [generate_l l v] generates a random lambda term l long using v variables*)
+
+val generate_l2: int -> int -> string list -> L.term
+(** [generate_l l v] generates a random lambda term l long using v variables*)

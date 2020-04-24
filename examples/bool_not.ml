@@ -13,9 +13,9 @@ let not_fitness t b =
 ;;
 
 let s = ga_init {
-  pop_size= 1024;
-  term_len= 6;
-  var_n= 4;
+  pop_size= 256;
+  term_len= 24;
+  var_n= 5;
   gen_n=100000;
   fitness_target= 1.0;
   test_best_f= (fun t -> (not_fitness t @@ Random.bool ()) = 1.0);

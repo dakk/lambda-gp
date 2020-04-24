@@ -75,7 +75,7 @@ let get_inner_term t pos =
 let mutate_random s t =
   replace_tree t 
   (1 + (Random.int @@ L.len t)) 
-  (Rand_term.generate_l (1 + (Random.int s.settings.term_len)) @@ 1 + (Random.int @@ s.settings.var_n - 1))
+  (Rand_term.generate_l2 (1 + (Random.int s.settings.term_len)) (1 + (Random.int @@ s.settings.var_n - 1)) [])
 ;;
 
 let mutate_redex s t =
@@ -99,9 +99,10 @@ let rec mutate_harvest s t = if L.len t <= s.settings.term_len * 4 then t else
 
 let mutate s t = 
   replace_tree t (Random.int @@ L.len t) 
-    (Rand_term.generate_l 
+    (Rand_term.generate_l2 
       (1 + (Random.int @@ s.settings.term_len / 2))
       (1 + (Random.int @@ s.settings.var_n - 1))
+      []
     )
 ;;
 
@@ -190,13 +191,24 @@ let rec pop_of_terms s l = match l with
 | l when l < s.settings.pop_size -> fix_size s @@ (List.nth tl (Random.int l))::tl
 ;; *)
 
+
+let rec check_env_unbound t env = match t with 
+  L.Var x -> if not (List.mem x env) then failwith ("Unbound variable " ^ x) else true
+| Abs(x, f) -> check_env_unbound f (x::env)
+| App(f, p) -> check_env_unbound p env
+;;
+
+let check_term_bound t = try check_env_unbound t [] with | _ -> false;;
+
 let ga_init s =   
   let rec gen_init_pop l = match l with
   | 0 -> []
   | _ -> 
-    let nt = Rand_term.generate s.term_len s.var_n in 
+    let nt = Rand_term.generate_l2 s.term_len s.var_n [] in 
+    (* let nt = Rand_term.generate s.term_len s.var_n in  *)
     (* List.iter (fun x -> printf "%s\n%!" x) @@ L.fv_l nt; *)
-    if L.len nt < s.term_len || not (s.valid_f nt) || not (check_term_bound nt) then gen_init_pop l 
+    (* L.len nt < s.term_len || not (check_term_bound nt)  *)
+    if not (s.valid_f nt) then gen_init_pop l 
     else (nt, s.fitness_f nt)::(gen_init_pop (l-1))
   in
   log "init [gens: %d] [pop_size: %d] [var: %d] [len: %d] [target: %f]" s.gen_n s.pop_size s.var_n s.term_len s.fitness_target;
@@ -230,18 +242,18 @@ let ga_print s =
   ()
 ;;
 
-let return_bounded t' t  = if check_term_bound t then t else t';;
+(* let return_bounded t' t  = if check_term_bound t then t else t';; *)
 
 let ga_step s = 
-  let rec cross_valid t t' = 
-    let tcross = crossover (t,t') in
+  (* let rec cross_valid t t' = 
+    let tcross = crossover (t,t') in 
     if not (check_term_bound @@ fst tcross) || not (check_term_bound @@ snd tcross) 
     then cross_valid t t' else tcross
-  in
+  in *)
   let rec apply_cross (tl: L.term list) = match tl with
 		[] -> []
-	| t::[] -> let tcross = cross_valid t t in (fst tcross)::(snd tcross)::[]
-	| t::t'::tl' -> let tcross = cross_valid t t in (fst tcross)::(snd tcross)::(apply_cross tl')
+	| t::[] -> let tcross = crossover (t, t) in (fst tcross)::(snd tcross)::[]
+	| t::t'::tl' -> let tcross = crossover (t, t') in (fst tcross)::(snd tcross)::(apply_cross tl')
   in
   let genn = s.generation + 1 in
 
@@ -254,15 +266,15 @@ let ga_step s =
 
   (* Mutations *)
   let mut_cross_pop = cross_pop
-    |> List.map (fun t -> if (Random.int 100 < 20) then return_bounded t @@ mutate s t else t) 
+    |> List.map (fun t -> if (Random.int 100 < 20) then mutate s t else t) 
     (* |> List.map (fun t -> if (Random.int 100 < 50) then mutate_drop s t else t)  *)
     (* |> List.map (fun t -> if (Random.int 100 < 10) then mutate_redex s t else t) *)
-    |> List.map (fun t -> if (Random.int 100 < 95) then return_bounded t @@ mutate_harvest s t else t)
-    |> List.map (fun t -> if (Random.int 100 < 20) then fix_term_unbound @@ mutate_random s t else t) 
-    |> List.map (fun t -> if (Random.int 100 < 30) then return_bounded t @@ L.eta_conversion t else t)
-    |> List.map (fun t -> if (Random.int 100 < 10) then return_bounded t @@ mutate_fp s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 95) then mutate_harvest s t else t)
+    |> List.map (fun t -> if (Random.int 100 < 20) then mutate_random s t else t) 
+    |> List.map (fun t -> if (Random.int 100 < 30) then L.eta_conversion t else t)
+    |> List.map (fun t -> if (Random.int 100 < 10) then mutate_fp s t else t)
     |> List.map (fun t -> if (Random.int 100 > 10) then t else 
-      return_bounded t @@ L.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
+      L.alfa_conversion (Rand_term.rand_var s.settings.var_n) (Rand_term.rand_var s.settings.var_n) t)
     (* |> List.map (fun t -> if check_term_bound t then t else fix_term_unbound t) *)
   in
 
